@@ -40,15 +40,15 @@ And that's just the beginning.
 
 Features – what awaits you
 
-- Operator parsing – <, >, <=, >=, !, ~like~, !NULL, BLANK, EMPTY and even ranges like 10><20 or 5><=15.
-- Magic keys – BLANK, !BLANK, EMPTY, !EMPTY – automatically adapt to the field type (string, number, date).
-- Automatic date fields – from a date field you get fieldYEAR, fieldMONTH, fieldDAY, fieldTIME, fieldUTS – without extra code.
-- Joins – LEFT, RIGHT, INNER, CROSS, STRAIGHT – all there.
-- Pagination & sorting – via pageNumber, pageSize and sort (e.g. '>name,<id').
-- Fulltext search – with searchString and searchTarget.
+- Operator parsing – `<`, `>`, `<=`, `>=`, `!`, `~like~`, `!NULL`, `BLANK`, `EMPTY` and even ranges like `10><20` or `5><=15`.
+- Magic keys – `BLANK`, `!BLANK`, `EMPTY`, `!EMPTY` – automatically adapt to the field type (string, number, date).
+- Automatic date fields – from a date field you get `fieldYEAR`, `fieldMONTH`, `fieldDAY`, `fieldTIME`, `fieldUTS` – without extra code.
+- Joins – `LEFT`, `RIGHT`, `INNER`, `CROSS`, `STRAIGHT` – all there.
+- Pagination & sorting – via `pageNumber`, `pageSize` and sort (e.g. '>name,<id').
+- Fulltext search – with `searchString` and `searchTarget`.
 - Custom SQL – security‑checked, with placeholder replacement.
 - Prepared statements – optional but highly recommended.
-- Flat OR groups – simply '~or~' => ['field' => 'value', ...].
+- Flat OR groups – simply `'~or~' => ['field' => 'value', ...]`.
 
 
 
