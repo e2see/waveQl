@@ -5,127 +5,127 @@ declare(strict_types=1);
 namespace e2;
 
 /**
- * waveQl – SQL-Query-Builder mit Operator-Parsing, Sicherheitsprüfung und optionalen Prepared Statements
- * =====================================================================================================
+ * waveQl – SQL-Query-Builder with operator parsing, security checks, and optional prepared statements
+ * ====================================================================================================
  *
- * Diese Klasse generiert aus fieldDefinitions, inputValues und tableInfo eine komplette SQL-Query.
- * Sie unterstützt komplexe Bedingungen durch intuitive Operatoren im Wert-String,
- * automatische Typbehandlung, Magic-Keys für Leerwerte, Bereichsabfragen, Joins,
- * Paginierung, Sortierung und Volltextsuche. Wahlweise mit Prepared Statements für erhöhte Sicherheit.
+ * This class generates a complete SQL query from fieldDefinitions, inputValues, and tableInfo.
+ * It supports complex conditions using intuitive operators in the value string,
+ * automatic type handling, magic keys for empty values, range queries, joins,
+ * pagination, sorting, and full‑text search. Optionally works with prepared statements for increased security.
  *
  *
- * OPERATOREN IM WERT-STRING
- * -------------------------
- *   - >10              -> Feld > 10
- *   - >=10             -> Feld >= 10
- *   - <10              -> Feld < 10
- *   - <=10             -> Feld <= 10
- *   - !10              -> Feld != 10
+ * OPERATORS IN THE VALUE STRING
+ * -----------------------------
+ *   - >10              -> field > 10
+ *   - >=10             -> field >= 10
+ *   - <10              -> field < 10
+ *   - <=10             -> field <= 10
+ *   - !10              -> field != 10
  *   - ~text~           -> LIKE '%text%'
  *   - text~            -> LIKE 'text%'
  *   - ~text            -> LIKE '%text'
  *   - a~b~c            -> LIKE '%a%b%c%'
  *   - !NULL            -> IS NOT NULL
  *   - NULL             -> IS NULL
- *   - UNSET            -> wird ignoriert
+ *   - UNSET            -> ignored
  *
  *
- * MAGIC-KEYS (typabhängig)
- * ------------------------
- *   - BLANK            -> String: = '' | Numerisch: = 0 | Datum: = ''
- *   - !BLANK           -> String: != '' | Numerisch: != 0 | Datum: != ''
- *   - EMPTY            -> String: IS NULL OR = '' | Numerisch: IS NULL OR = 0 | Datum: IS NULL OR = ''
- *   - !EMPTY           -> String: IS NOT NULL AND != '' | Numerisch: IS NOT NULL AND != 0 | Datum: IS NOT NULL AND != ''
+ * MAGIC KEYS (type‑dependent)
+ * ---------------------------
+ *   - BLANK            -> String: = '' | Numeric: = 0 | Date: = ''
+ *   - !BLANK           -> String: != '' | Numeric: != 0 | Date: != ''
+ *   - EMPTY            -> String: IS NULL OR = '' | Numeric: IS NULL OR = 0 | Date: IS NULL OR = ''
+ *   - !EMPTY           -> String: IS NOT NULL AND != '' | Numeric: IS NOT NULL AND != 0 | Date: IS NOT NULL AND != ''
  *
  *
- * BEREICHSOPERATOREN (numerisch & Datum/Zeit)
+ * RANGE OPERATORS (numeric & date/time)
+ * -------------------------------------
+ *   - 10><20           -> 10 < field < 20      (exclusive)
+ *   - 10><=20          -> 10 < field <= 20     (exclusive‑inclusive)
+ *   - 10>=<20          -> 10 <= field < 20     (inclusive‑exclusive)
+ *   - 10=><=20         -> 10 <= field <= 20    (inclusive)
+ *   Swapped boundaries are automatically corrected.
+ *
+ *
+ * FILTER PARAMETERS (in the '~filter~' array)
  * -------------------------------------------
- *   - 10><20           -> 10 < Feld < 20      (exklusiv)
- *   - 10><=20          -> 10 < Feld <= 20     (exklusiv-inklusiv)
- *   - 10>=<20          -> 10 <= Feld < 20     (inklusiv-exklusiv)
- *   - 10=><=20         -> 10 <= Feld <= 20    (inklusiv)
- *   Vertauschte Grenzen werden automatisch korrigiert.
+ *   - sort          : e.g. '>name,<id' (descending name, ascending id)
+ *   - pageNumber    : page number (1‑based)
+ *   - pageSize      : entries per page
+ *   - searchString  : search term (wrapped in %...%)
+ *   - searchTarget  : comma‑separated target fields
+ *   - sqlCondition  : custom SQL expression (checked for safety)
  *
  *
- * FILTER-PARAMETER (im '~filter~'-Array)
- * ---------------------------------------
- *   - sort          : z.B. '>name,<id' (absteigend name, aufsteigend id)
- *   - pageNumber    : Seitennummer (1‑basiert)
- *   - pageSize      : Einträge pro Seite
- *   - searchString  : Suchbegriff (wird in %...% gewrappt)
- *   - searchTarget  : Kommagetrennte Zielfelder
- *   - mysql         : Benutzerdefinierter SQL-Ausdruck (wird auf Sicherheit geprüft)
+ * OR GROUPS (flat group)
+ * ----------------------
+ *   '~or~' => [ 'field' => 'value', 'other' => '>5' ]
+ *   Produces: (field = value OR other > 5)
  *
  *
- * OR-GRUPPEN (flache Gruppe)
- * --------------------------
- *   '~or~' => [ 'feld' => 'wert', 'anderes' => '>5' ]
- *   Erzeugt: (feld = wert OR anderes > 5)
- *
- *
- * AUFBAU fieldDefinitions
- * -----------------------
+ * STRUCTURE OF fieldDefinitions
+ * -----------------------------
  *   [
- *       'feldname' => [
- *           'rowName' => 'tbl.spalte',   // Spaltenname oder SQL-Ausdruck
+ *       'fieldname' => [
+ *           'rowName' => 'table.column',   // column name or SQL expression
  *           'type'    => 'string|integer|float|date|time|dateTime|...',
- *           'value'   => 'optionaler Standardwert'
+ *           'value'   => 'optional default value'
  *       ],
- *       '~filter~' => [ ... ]   // optionale Filter-Standards
+ *       '~filter~' => [ ... ]   // optional filter defaults
  *   ]
  *
  *
- * AUFBAU inputValues
- * ------------------
+ * STRUCTURE OF inputValues
+ * ------------------------
  *   [
- *       'feldname' => 'wert',          // überschreibt fieldDefinitions['value']
- *       '~filter~' => [ ... ],         // überschreibt fieldDefinitions['~filter~']
- *       '~or~'     => [ ... ]          // flache OR-Gruppe
+ *       'fieldname' => 'value',          // overrides fieldDefinitions['value']
+ *       '~filter~' => [ ... ],           // overrides fieldDefinitions['~filter~']
+ *       '~or~'     => [ ... ]            // flat OR group
  *   ]
  *
  *
- * AUFBAU tableInfo
- * ----------------
+ * STRUCTURE OF tableInfo
+ * ----------------------
  *   [
- *       'tableName' => 'haupttabelle',
+ *       'tableName' => 'main_table',
  *       'tableKey'  => 'alias',
  *       'joinList'  => [
  *           [
  *               'type'          => 'LEFT',   // LEFT, RIGHT, INNER, CROSS, STRAIGHT
- *               'tableName'     => 'tabelle',
+ *               'tableName'     => 'table',
  *               'tableKey'      => 'alias',
- *               'connectColumn' => 'spalte',
- *               'connectWith'   => 'alias.spalte'
+ *               'connectColumn' => 'column',
+ *               'connectWith'   => 'alias.column'
  *           ]
  *       ]
  *   ]
  *
  *
- * AUTOMATISCHE FELDERWEITERUNGEN
- * ------------------------------
- * Für Datums‑/Zeit‑Felder werden zusätzliche virtuelle Felder generiert:
- *   - feldYEAR, feldMONTH, feldDAY, feldDATE, feldTIME, feldHOUR, feldMINUTE, feldUTS
+ * AUTOMATIC FIELD EXTENSIONS
+ * --------------------------
+ * For date/time fields, additional virtual fields are generated:
+ *   - fieldYEAR, fieldMONTH, fieldDAY, fieldDATE, fieldTIME, fieldHOUR, fieldMINUTE, fieldUTS
  *
  *
- * VERWENDUNG
- * ----------
+ * USAGE
+ * -----
  *   $builder = new \e2\waveQl($db, $tableInfo, $fieldDefinitions, $inputValues, ['prepared' => true]);
- *   $rows = $builder->execute();          // Ergebnis abrufen
- *   $sql = $builder->getQuery();          // SQL-String für Debug
+ *   $rows = $builder->execute();          // retrieve result
+ *   $sql = $builder->getQuery();          // SQL string for debugging
  *
  *
- * SICHERHEITSHINWEIS
- * ------------------
- *   Der 'mysql'-Parameter wird auf gefährliche Schlüsselwörter geprüft (DROP, DELETE, UNION, …).
- *   Bei Verdacht wird er ignoriert und ein Fehler geloggt. Verwende Prepared Statements,
- *   wenn du zusätzliche Sicherheit wünschst.
+ * SECURITY NOTE
+ * -------------
+ *   The 'sqlCondition' parameter is checked for dangerous keywords (DROP, DELETE, UNION, …).
+ *   If suspicious, it is ignored and an error is logged. Use prepared statements for extra safety.
  *
- * =====================================================================================================
+ * ====================================================================================================
  */
-
 class waveQl
 {
-    // --- Operator-Kürzel -------------------------------------------------------------
+
+    ########################### OPERATOR SHORTCUTS
+
     private const OP_EQUAL         = 'e';
     private const OP_NOT_EQUAL     = 'ne';
     private const OP_LESS_THAN     = 'lt';
@@ -135,7 +135,9 @@ class waveQl
     private const OP_LIKE          = 'like';
     private const OP_RAW           = 'raw';
 
-    // --- Spezielle Werte --------------------------------------------------------------
+
+    ########################### SPECIAL VALUES
+
     private const VAL_UNSET       = 'UNSET';
     private const VAL_NULL        = 'NULL';
     private const VAL_NOT_NULL    = '!NULL';
@@ -144,11 +146,15 @@ class waveQl
     private const VAL_EMPTY       = 'EMPTY';
     private const VAL_NOT_EMPTY   = '!EMPTY';
 
-    // --- Sortierrichtungen ------------------------------------------------------------
+
+    ########################### SORT DIRECTIONS
+
     private const SORT_DESC       = '>';
     private const SORT_ASC        = '<';
 
-    // --- Feldtypen --------------------------------------------------------------------
+
+    ########################### FIELD TYPES
+
     private const TYPE_STRING     = 'string';
     private const TYPE_INTEGER    = 'integer';
     private const TYPE_FLOAT      = 'float';
@@ -181,114 +187,123 @@ class waveQl
         self::TYPE_DATETIME,
     ];
 
-    // --- Gruppenkonstante (flache OR-Gruppen) -----------------------------------------
+
+    ########################### GROUP CONSTANTS (FLAT OR GROUPS)
+
     private const GROUP_OR     = '~or~';
     private const GROUP_FILTER = '~filter~';
 
-    // --- Eigenschaften ----------------------------------------------------------------
+
+    ########################### PROPERTIES
+
     private array $fieldDefinitions;
     private array $inputValues;
     private array $tableInfo;
     private array $resolvedData = [];
-    private $db; // kann mysqli oder MockDb sein
+    private $db; // can be mysqli or MockDb
     private bool $usePrepared;
 
     private array $params = [];
     private string $types = '';
 
 
+    ########################### CONSTRUCTOR & INITIALISATION
 
-    ########################### KONSTRUKTOR & INITIALISIERUNG
 
-    /**
-     * Konstruktor: initialisiert den Builder mit Datenbankverbindung und Konfiguration.
-     */
+    ##### CONSTRUCTOR: INITIALISES THE BUILDER WITH DATABASE CONNECTION AND CONFIGURATION.
+
     public function __construct($db, array $tableInfo, array $fieldDefinitions, array $inputValues = [], array $options = [])
     {
-        //-- Datenbankverbindung speichern (für Escaping und Prepared)
+        //-- store database connection (for escaping and prepared)
         $this->db               = $db;
-        //-- Tabelleninformationen (inkl. Joins) übernehmen
+        //-- keep table information (including joins)
         $this->tableInfo        = $tableInfo;
-        //-- Felddefinitionen merken
+        //-- keep field definitions
         $this->fieldDefinitions = $fieldDefinitions;
-        //-- Eingabewerte (überschreiben) speichern
+        //-- store input values (overwrites)
         $this->inputValues      = $inputValues;
-        //-- Soll mit Prepared Statements gearbeitet werden?
+        //-- use prepared statements?
         $this->usePrepared      = $options['prepared'] ?? false;
 
-        //-- Alte Datenstrukturen konvertieren (Abwärtskompatibilität)
-        $this->migrateLegacyData();
+        //-- convert legacy data structures (backwards compatibility)
+        $this->migrateLegacyData(true, false);
 
-        //-- Eigentliche Initialisierung: resolvedData aufbauen
+        //-- actual initialisation: build resolvedData
         $this->initData();
     }
 
 
+    ##### MIGRATES OLD STRUCTURES (BACKWARDS COMPATIBLE)
 
-    ### migriert alte leftTableList und filter-Schlüssel (abwärtskompatibel)
-    private function migrateLegacyData(): void
+    private function migrateLegacyData(bool $migrateTable = true, bool $inputOnly = false): void
     {
-        $tableName = $this->tableInfo['tableName'] ?? 'unbekannte Tabelle';
+        $tableName = $this->tableInfo['tableName'] ?? 'unknown table';
 
-        //-- leftTableList → joinList
-        if (isset($this->tableInfo['leftTableList']) && is_array($this->tableInfo['leftTableList']) && !isset($this->tableInfo['joinList'])) {
-            error_log("waveQl (Tabelle $tableName): leftTableList ist veraltet, verwende joinList. Bitte aktualisieren.");
-            $joinList = [];
-            foreach ($this->tableInfo['leftTableList'] as $join) {
-                //-- Standard-Join-Typ ist LEFT, falls nicht angegeben
-                $join['type'] = $join['type'] ?? 'LEFT';
-                $joinList[] = $join;
+        //-- 1. Table migration (only if requested)
+        if ($migrateTable) {
+            if (isset($this->tableInfo['leftTableList']) && is_array($this->tableInfo['leftTableList']) && !isset($this->tableInfo['joinList'])) {
+                error_log("waveQl (table $tableName): leftTableList is deprecated, use joinList. Please update.");
+                $joinList = [];
+                foreach ($this->tableInfo['leftTableList'] as $join) {
+                    //-- default join type is LEFT if not specified
+                    $join['type'] = $join['type'] ?? 'LEFT';
+                    $joinList[] = $join;
+                }
+                $this->tableInfo['joinList'] = $joinList;
+                unset($this->tableInfo['leftTableList']);
             }
-            $this->tableInfo['joinList'] = $joinList;
-            unset($this->tableInfo['leftTableList']);
         }
 
-        //-- fieldDefinitions['filter'] → '~filter~'
-        if (isset($this->fieldDefinitions['filter']) && !isset($this->fieldDefinitions[self::GROUP_FILTER])) {
-            error_log("waveQl (Tabelle $tableName): fieldDefinitions['filter'] ist veraltet, verwende '~filter~'. Bitte aktualisieren.");
-            $this->fieldDefinitions[self::GROUP_FILTER] = $this->fieldDefinitions['filter'];
-            unset($this->fieldDefinitions['filter']);
-        }
+        //-- Determine which arrays to process
+        $targets = $inputOnly ? [&$this->inputValues] : [&$this->fieldDefinitions, &$this->inputValues];
 
-        //-- inputValues['filter'] → '~filter~'
-        if (isset($this->inputValues['filter']) && !isset($this->inputValues[self::GROUP_FILTER])) {
-            error_log("waveQl (Tabelle $tableName): inputValues['filter'] ist veraltet, verwende '~filter~'. Bitte aktualisieren.");
-            $this->inputValues[self::GROUP_FILTER] = $this->inputValues['filter'];
-            unset($this->inputValues['filter']);
-        }
+        foreach ($targets as &$target) {
+            //-- 2. Migrate filter key 'mysql' → 'sqlCondition'
+            foreach (['filter', self::GROUP_FILTER] as $filterKey) {
+                if (isset($target[$filterKey]) && is_array($target[$filterKey])) {
+                    if (array_key_exists('mysql', $target[$filterKey]) && !array_key_exists('sqlCondition', $target[$filterKey])) {
+                        $target[$filterKey]['sqlCondition'] = $target[$filterKey]['mysql'];
+                        unset($target[$filterKey]['mysql']);
+                        error_log("waveQl (table $tableName): In " . ($inputOnly ? 'inputValues' : 'fieldDefinitions') . "['$filterKey'] the key 'mysql' has been renamed to 'sqlCondition'. Please update.");
+                    }
+                }
+            }
 
-        //-- Doppelungen bereinigen
-        if (isset($this->fieldDefinitions['filter']) && isset($this->fieldDefinitions[self::GROUP_FILTER])) {
-            error_log("waveQl (Tabelle $tableName): fieldDefinitions enthält sowohl 'filter' als auch '~filter~'. 'filter' wird ignoriert. Bitte 'filter' entfernen.");
-            unset($this->fieldDefinitions['filter']);
-        }
-        if (isset($this->inputValues['filter']) && isset($this->inputValues[self::GROUP_FILTER])) {
-            error_log("waveQl (Tabelle $tableName): inputValues enthält sowohl 'filter' als auch '~filter~'. 'filter' wird ignoriert. Bitte 'filter' entfernen.");
-            unset($this->inputValues['filter']);
+            //-- 3. Migrate filter key 'filter' → '~filter~' (top level)
+            if (isset($target['filter']) && !isset($target[self::GROUP_FILTER])) {
+                error_log("waveQl (table $tableName): " . ($inputOnly ? 'inputValues' : 'fieldDefinitions') . "['filter'] is deprecated, use '~filter~'. Please update.");
+                $target[self::GROUP_FILTER] = $target['filter'];
+                unset($target['filter']);
+            }
+            //-- Remove duplicates if both are set
+            if (isset($target['filter']) && isset($target[self::GROUP_FILTER])) {
+                error_log("waveQl (table $tableName): " . ($inputOnly ? 'inputValues' : 'fieldDefinitions') . " contains both 'filter' and '~filter~'. 'filter' will be ignored. Please remove 'filter'.");
+                unset($target['filter']);
+            }
         }
     }
 
 
+    ##### CENTRAL DATA INITIALISATION: FIELD DEFINITIONS, FILTER, OR GROUPS
 
-    ### zentrale Dateninitialisierung: Felddefinitionen, Filter, OR-Gruppen
     private function initData(): void
     {
         $resolved = [];
 
-        //-- Zuerst alle normalen Felder aus fieldDefinitions übernehmen
+        //-- first, take all normal fields from fieldDefinitions
         foreach ($this->fieldDefinitions as $key => $config) {
-            //-- Nur gültige Felddefinitionen verarbeiten (kein Filter, rowName vorhanden)
+            //-- process only valid field definitions (no filter, rowName exists)
             if (!is_array($config) || $key === self::GROUP_FILTER) continue;
             if (empty($config['rowName']) || !is_string($config['rowName'])) continue;
 
-            //-- Sicherheitshalber HTML-Tags entfernen
+            //-- remove HTML tags for safety
             $config['rowName'] = strip_tags($config['rowName']);
-            //-- Typ normalisieren (falls nicht angegeben: string)
+            //-- normalise type (default: string)
             $config['type'] = $this->normalizeType($config);
-            //-- Standardwert setzen (leerer String falls nicht vorhanden)
+            //-- set default value (empty string if none)
             $config['value'] = isset($config['value']) && is_string($config['value']) ? $config['value'] : '';
 
-            //-- Automatische Zusatzfelder für Datum/Zeit erzeugen (z.B. feldYEAR)
+            //-- generate automatic fields for date/time (e.g. fieldYEAR)
             $autoFields = $this->generateAutoFields($key, $config);
             foreach ($autoFields as $autoKey => $autoDef) {
                 if (!isset($resolved[$autoKey])) {
@@ -296,32 +311,32 @@ class waveQl
                 }
             }
 
-            //-- Ursprüngliches Feld hinzufügen
+            //-- add original field
             $resolved[$key] = $config;
         }
 
-        //-- Filter-Defaults aus fieldDefinitions und inputValues zusammenführen
+        //-- merge filter defaults from fieldDefinitions and inputValues
         $filterDefaults = $this->fieldDefinitions[self::GROUP_FILTER] ?? [];
         $filterInput = $this->inputValues[self::GROUP_FILTER] ?? [];
 
         $resolved[self::GROUP_FILTER] = $this->buildFilter($filterDefaults, $filterInput);
 
         $this->resolvedData = $resolved;
-        //-- inputValues in die resolvedData einarbeiten (überschreiben)
+        //-- incorporate inputValues into resolvedData (overwrite)
         $this->mergeInputValues();
 
-        //-- OR-Gruppe parsen, falls vorhanden
+        //-- parse OR group if present
         $this->parseInputGroups();
 
-        //-- Filter weiterverarbeiten (Sortierung validieren, Paginierung, mysql-Sicherheit)
+        //-- further process filter (validate sorting, pagination, sqlCondition safety)
         $this->processFilter();
-        //-- Operatoren parsen und firstElemNumber berechnen
+        //-- parse operators and compute firstElemNumber
         $this->enlargeData();
     }
 
 
+    ##### NORMALISES THE FIELD TYPE (DEFAULT: STRING)
 
-    ### normalisiert den Typ eines Feldes (Fallback: string)
     private function normalizeType(array $config): string
     {
         return isset($config['type']) && is_string($config['type'])
@@ -330,16 +345,16 @@ class waveQl
     }
 
 
+    ##### GENERATES VIRTUAL FIELDS FOR DATE/TIME (E.G. fieldYEAR, fieldMONTH, …)
 
-    ### erzeugt virtuelle Felder für Datum/Zeit (z.B. feldYEAR, feldMONTH, …)
     private function generateAutoFields(string $key, array $config): array
     {
         $type = $config['type'];
-        //-- Nur für Datums-/Zeit-Typen
+        //-- only for date/time types
         if (!in_array($type, self::DATETIME_TYPES)) return [];
 
         $funcs = [];
-        //-- Datums-Funktionen
+        //-- date functions
         if ($type === self::TYPE_DATETIME || $type === self::TYPE_DATE) {
             $funcs[self::TYPE_DATE] = 'DATE';
             $funcs[self::TYPE_YEAR] = 'YEAR';
@@ -347,19 +362,19 @@ class waveQl
             $funcs[self::TYPE_MONTH] = 'MONTH';
             $funcs[self::TYPE_DAY] = 'DAY';
         }
-        //-- Zeit-Funktionen
+        //-- time functions
         if ($type === self::TYPE_DATETIME || $type === self::TYPE_TIME) {
             $funcs[self::TYPE_TIME] = 'TIME';
             $funcs[self::TYPE_HOUR] = 'HOUR';
             $funcs[self::TYPE_MINUTE] = 'MINUTE';
         }
-        //-- Unix-Timestamp immer verfügbar
+        //-- Unix timestamp always available
         $funcs[self::TYPE_UTS] = 'UNIX_TIMESTAMP';
 
         $auto = [];
         foreach ($funcs as $subType => $sqlFunc) {
             $autoKey = $key . strtoupper($subType);
-            //-- SQL-Ausdruck: Funktion auf rowName anwenden
+            //-- SQL expression: apply function to rowName
             $auto[$autoKey] = [
                 'value'   => '',
                 'rowName' => $sqlFunc . '(' . htmlspecialchars($config['rowName']) . ')',
@@ -370,39 +385,39 @@ class waveQl
     }
 
 
+    ##### BUILDS THE FILTER ARRAY FROM DEFAULTS AND INPUT (ONLY ALLOWED FIELDS)
 
-    ### baut das Filter-Array aus defaults und input (nur erlaubte Felder)
     private function buildFilter(array $defaults, array $input): array
     {
-        $fields = ['sort', 'pageNumber', 'pageSize', 'mysql', 'searchString', 'searchTarget'];
+        $fields = ['sort', 'pageNumber', 'pageSize', 'sqlCondition', 'searchString', 'searchTarget'];
         $filter = [];
 
         foreach ($fields as $f) {
-            //-- Input hat Vorrang vor Defaults
+            //-- input takes precedence over defaults
             if (isset($input[$f]) && (is_string($input[$f]) || is_numeric($input[$f]))) {
                 $filter[$f] = trim((string)$input[$f]);
             } elseif (isset($defaults[$f]) && (is_string($defaults[$f]) || is_numeric($defaults[$f]))) {
                 $filter[$f] = trim((string)$defaults[$f]);
             } else {
-                $filter[$f] = false; // nicht gesetzt
+                $filter[$f] = false; // not set
             }
         }
         return $filter;
     }
 
 
+    ##### OVERWRITES FIELD VALUES WITH INPUTVALUES (IF PRESENT)
 
-    ### überschreibt Feldwerte mit inputValues (falls vorhanden)
     private function mergeInputValues(): void
     {
         foreach ($this->resolvedData as $key => $config) {
-            //-- Filter nicht überschreiben, nur echte Felder
+            //-- do not overwrite filter, only real fields
             if ($key === self::GROUP_FILTER) continue;
-            //-- Wenn ein Wert in inputValues existiert, nimm ihn
+            //-- if a value exists in inputValues, take it
             if (isset($this->inputValues[$key]) && (is_string($this->inputValues[$key]) || is_numeric($this->inputValues[$key]))) {
                 $config['value'] = trim((string)$this->inputValues[$key]);
             } else {
-                //-- Sonst den bisherigen Wert (aus fieldDefinitions) beibehalten
+                //-- otherwise keep the existing value (from fieldDefinitions)
                 $config['value'] = trim((string)($config['value'] ?? ''));
             }
             $this->resolvedData[$key] = $config;
@@ -410,20 +425,20 @@ class waveQl
     }
 
 
+    ##### PARSES THE FLAT OR GROUP FROM INPUTVALUES
 
-    ### parst die flache OR-Gruppe aus inputValues
     private function parseInputGroups(): void
     {
         if (isset($this->inputValues[self::GROUP_OR]) && is_array($this->inputValues[self::GROUP_OR])) {
             $conditions = $this->inputValues[self::GROUP_OR];
-            //-- Rekursive OR-Gruppen entfernen (nur flach erlaubt)
+            //-- remove recursive OR groups (only flat allowed)
             foreach ($conditions as $key => $value) {
                 if ($key === self::GROUP_OR) {
                     unset($conditions[$key]);
                 }
             }
             $groupKey = self::GROUP_OR;
-            //-- Spezielle Struktur für OR-Gruppe merken
+            //-- store special structure for OR group
             $this->resolvedData[$groupKey] = [
                 '_type'      => 'or_group',
                 'conditions' => $conditions,
@@ -433,13 +448,13 @@ class waveQl
     }
 
 
+    ##### PROCESSES FILTER PARAMETERS (SORTING, SEARCH, PAGINATION, SAFETY CHECK)
 
-    ### verarbeitet die Filter-Parameter (Sortierung, Suche, Paginierung, Sicherheitscheck)
     private function processFilter(): void
     {
         $f = &$this->resolvedData[self::GROUP_FILTER];
 
-        //-- Sortierung validieren: nur existierende Felder erlauben
+        //-- validate sorting: allow only existing fields
         $sortItems = [];
         if (is_string($f['sort']) && $f['sort'] !== '') {
             $sortItems = explode(',', $f['sort']);
@@ -453,14 +468,14 @@ class waveQl
                 $sign = $maybeSign;
                 $item = trim(mb_substr($item, 1));
             }
-            //-- Prüfen, ob das Feld in fieldDefinitions existiert
+            //-- check if the field exists in fieldDefinitions
             if (isset($this->fieldDefinitions[$item])) {
                 $validSorts[] = $sign . $item;
             }
         }
         $f['sort'] = $validSorts ? implode(',', $validSorts) : ($this->fieldDefinitions[self::GROUP_FILTER]['sort'] ?? '');
 
-        //-- Suchziele validieren
+        //-- validate search targets
         $targetItems = [];
         if (is_string($f['searchTarget']) && $f['searchTarget'] !== '') {
             $targetItems = explode(',', $f['searchTarget']);
@@ -474,7 +489,7 @@ class waveQl
         }
         $f['searchTarget'] = $validTargets ? implode(',', $validTargets) : ($this->fieldDefinitions[self::GROUP_FILTER]['searchTarget'] ?? '');
 
-        //-- Paginierung: Seitenzahlen müssen positiv sein
+        //-- pagination: page numbers must be positive
         $pageNumber = abs((int)$f['pageNumber']);
         $pageSize = abs((int)$f['pageSize']);
         if ($pageSize === 0 || $pageNumber === 0) {
@@ -485,39 +500,39 @@ class waveQl
             $f['pageSize'] = $pageSize;
         }
 
-        //-- Benutzerdefinierten SQL-Check auf Sicherheit
-        $mysql = '';
-        if (is_string($f['mysql'])) {
-            $mysql = trim($f['mysql']);
+        //-- custom SQL safety check
+        $sqlCondition = '';
+        if (is_string($f['sqlCondition'])) {
+            $sqlCondition = trim($f['sqlCondition']);
         }
-        if ($mysql !== '') {
-            if (!$this->isMysqlSafe($mysql)) {
-                error_log("waveQl: Unsicherer mysql-Parameter blockiert: " . $mysql);
-                $f['mysql'] = false;
+        if ($sqlCondition !== '') {
+            if (!$this->isSqlConditionSafe($sqlCondition)) {
+                error_log("waveQl: unsafe sqlCondition parameter blocked: " . $sqlCondition);
+                $f['sqlCondition'] = false;
             } else {
-                //-- Platzhalter durch rowName ersetzen (z.B. 'feld' durch 'tbl.spalte')
-                $mysql = ' ' . $mysql . ' ';
+                //-- replace placeholders with rowName (e.g. 'field' → 'table.column')
+                $sqlCondition = ' ' . $sqlCondition . ' ';
                 foreach ($this->fieldDefinitions as $replaceName => $replaceArr) {
                     if ($replaceName !== self::GROUP_FILTER && isset($replaceArr['rowName'])) {
-                        $mysql = str_replace(' ' . $replaceName . ' ', ' ' . $replaceArr['rowName'] . ' ', $mysql);
+                        $sqlCondition = str_replace(' ' . $replaceName . ' ', ' ' . $replaceArr['rowName'] . ' ', $sqlCondition);
                     }
                 }
-                $mysql = trim($mysql);
-                $f['mysql'] = $mysql !== '' ? $mysql : false;
+                $sqlCondition = trim($sqlCondition);
+                $f['sqlCondition'] = $sqlCondition !== '' ? $sqlCondition : false;
             }
         } else {
-            $f['mysql'] = false;
+            $f['sqlCondition'] = false;
         }
     }
 
 
+    ##### ENLARGES DATA WITH COMPUTED VALUES (firstElemNumber, OPERATOR ARRAYS)
 
-    ### erweitert die Daten um berechnete Werte (firstElemNumber, Operator-Arrays)
     private function enlargeData(): void
     {
         $main = $this->getMainParams();
         foreach ($main as $key => $def) {
-            //-- Für normale Felder (nicht OR-Gruppe) Operatoren parsen
+            //-- for normal fields (not OR group) parse operators
             if (!isset($def['_type'])) {
                 $main[$key] = array_merge($def, $this->parseOperators($def));
             } else {
@@ -526,7 +541,7 @@ class waveQl
         }
 
         $filter = $this->getFilterParams();
-        //-- Berechnung des Offsets für LIMIT
+        //-- compute offset for LIMIT
         if ($filter['pageNumber'] !== false && $filter['pageSize'] !== false) {
             $filter['firstElemNumber'] = ($filter['pageSize'] * $filter['pageNumber']) - $filter['pageSize'];
         } else {
@@ -538,10 +553,11 @@ class waveQl
     }
 
 
+    ########################### OPERATOR PARSING
 
-    ########################### OPERATOR-PARSING
 
-    ### parst den Wert eines Feldes und ermittelt die verwendeten Operatoren
+    ##### PARSES THE VALUE OF A FIELD AND DETERMINES THE OPERATORS USED
+
     private function parseOperators(array $def): array
     {
         $result = [
@@ -558,24 +574,24 @@ class waveQl
         $value = $def['value'];
         $type = $def['type'];
 
-        //-- Leerer Wert oder UNSET ignoriert
+        //-- empty value or UNSET is ignored
         if ($value === '' || $value === self::VAL_UNSET) {
             return $result;
         }
 
-        //-- Spezialfälle NULL / NOT NULL
+        //-- special cases NULL / NOT NULL
         if ($value === self::VAL_NULL || $value === self::VAL_NOT_NULL) {
             $result[self::OP_EQUAL] = $value;
             return $result;
         }
 
-        //-- Magic-Keys (BLANK, !BLANK, EMPTY, !EMPTY)
+        //-- magic keys (BLANK, !BLANK, EMPTY, !EMPTY)
         if (in_array($value, [self::VAL_BLANK, self::VAL_NOT_BLANK, self::VAL_EMPTY, self::VAL_NOT_EMPTY], true)) {
             $result[self::OP_EQUAL] = $value;
             return $result;
         }
 
-        //-- Je nach Typ unterschiedliche Parsing-Logik
+        //-- different parsing logic depending on type
         if (in_array($type, self::NUMERIC_TYPES)) {
             return $this->parseNumericOperators($value);
         } elseif (in_array($type, self::DATETIME_TYPES)) {
@@ -585,7 +601,9 @@ class waveQl
         }
     }
 
-    ### parst Operatoren für numerische Typen
+
+    ##### PARSES OPERATORS FOR NUMERIC TYPES
+
     private function parseNumericOperators(string $value): array
     {
         $result = [
@@ -599,7 +617,7 @@ class waveQl
             self::OP_RAW           => false,
         ];
 
-        //-- Zuerst prüfen, ob ein Bereichsoperator vorliegt
+        //-- first check if a range operator is present
         $this->parseRange($value, true, $result);
 
         if (
@@ -614,7 +632,7 @@ class waveQl
         $fl = mb_substr($value, 0, 1);
         $sl = mb_substr($value, 1, 1);
 
-        //-- Vergleichsoperatoren >, >=, <, <=
+        //-- comparison operators >, >=, <, <=
         if ($fl === '>' || $fl === '<') {
             $rest = trim(mb_substr($value, 1));
             if ($fl === '>' && $sl === '=') {
@@ -639,7 +657,7 @@ class waveQl
             return $result;
         }
 
-        //-- Ungleich-Operator !
+        //-- inequality operator !
         if ($fl === '!') {
             $rest = trim(mb_substr($value, 1));
             if ($rest !== '' && is_numeric($rest)) {
@@ -648,7 +666,7 @@ class waveQl
             return $result;
         }
 
-        //-- Einfacher Gleichheitswert (kein Operator)
+        //-- simple equality (no operator)
         if (is_numeric($value)) {
             $result[self::OP_EQUAL] = (float)$value;
         }
@@ -656,7 +674,9 @@ class waveQl
         return $result;
     }
 
-    ### parst Operatoren für Datums-/Zeit-Typen
+
+    ##### PARSES OPERATORS FOR DATE/TIME TYPES
+
     private function parseDateTimeOperators(string $value): array
     {
         $result = [
@@ -723,17 +743,19 @@ class waveQl
         return $result;
     }
 
-    ### parst Bereichsoperatoren wie ><, >=<, etc.
+
+    ##### PARSES RANGE OPERATORS LIKE ><, >=<, ETC.
+
     private function parseRange(string $value, bool $asNumber, array &$result): void
     {
-        //-- =><= (inklusiv-inklusiv)
+        //-- =><= (inclusive-inclusive)
         if (strpos($value, '=><=') !== false) {
             $parts = explode('=><=', $value);
             if (count($parts) === 2) {
                 $a = $asNumber ? (is_numeric($parts[0]) ? (float)$parts[0] : null) : $parts[0];
                 $b = $asNumber ? (is_numeric($parts[1]) ? (float)$parts[1] : null) : $parts[1];
                 if ($a !== null && $b !== null) {
-                    //-- Grenzen bei Bedarf tauschen
+                    //-- swap boundaries if needed
                     if ($asNumber ? ($a <= $b) : (strcmp($a, $b) <= 0)) {
                         $result[self::OP_GREATER_EQUAL] = $a;
                         $result[self::OP_LESS_EQUAL] = $b;
@@ -746,7 +768,7 @@ class waveQl
             return;
         }
 
-        //-- =>< (inklusiv-exklusiv)
+        //-- =>< (inclusive-exclusive)
         if (strpos($value, '=><') !== false) {
             $parts = explode('=><', $value);
             if (count($parts) === 2) {
@@ -765,7 +787,7 @@ class waveQl
             return;
         }
 
-        //-- ><= (exklusiv-inklusiv)
+        //-- ><= (exclusive-inclusive)
         if (strpos($value, '><=') !== false) {
             $parts = explode('><=', $value);
             if (count($parts) === 2) {
@@ -784,7 +806,7 @@ class waveQl
             return;
         }
 
-        //-- >< (exklusiv-exklusiv)
+        //-- >< (exclusive-exclusive)
         if (strpos($value, '><') !== false) {
             $parts = explode('><', $value);
             if (count($parts) === 2) {
@@ -804,7 +826,9 @@ class waveQl
         }
     }
 
-    ### parst Operatoren für String-Typen (LIKE, !, Raw-Escaping)
+
+    ##### PARSES OPERATORS FOR STRING TYPES (LIKE, !, RAW ESCAPING)
+
     private function parseStringOperators(string $value): array
     {
         $result = [
@@ -830,7 +854,7 @@ class waveQl
             return $result;
         }
 
-        //-- Backslash escaped den nachfolgenden Magic-Key
+        //-- backslash escapes the following magic key
         if ($fl === '\\') {
             $rest = trim(mb_substr($value, 1));
             if ($rest !== '') {
@@ -839,7 +863,7 @@ class waveQl
             return $result;
         }
 
-        //-- Ungleich
+        //-- inequality
         if ($fl === '!') {
             $rest = trim(mb_substr($value, 1));
             if ($rest !== '') {
@@ -848,18 +872,18 @@ class waveQl
             return $result;
         }
 
-        //-- LIKE-Operator: mindestens eine Tilde
+        //-- LIKE operator: at least one tilde
         if (substr_count($value, '~') >= 1) {
             $parts = explode('~', $value);
             $string = implode('~', $parts);
-            //-- Doppelte Tilden ignorieren (leere Teile)
+            //-- ignore double tildes (empty parts)
             if (strpos($string, '~~') === false) {
                 $result[self::OP_LIKE] = $string;
             }
             return $result;
         }
 
-        //-- Einfacher Gleichheitswert
+        //-- simple equality
         if ($value !== '') {
             $result[self::OP_EQUAL] = $value;
         }
@@ -868,16 +892,17 @@ class waveQl
     }
 
 
+    ########################### BUILDING WHERE CONDITIONS
 
-    ########################### WHERE-BEDINGUNGEN BAUEN
 
-    ### zentrale Methode zum Bauen von WHERE-Bedingungen (für String und Prepared)
+    ##### CENTRAL METHOD FOR BUILDING WHERE CONDITIONS (FOR STRING AND PREPARED)
+
     private function buildWhereConditions(array $def, int $pad, string $mode): array
     {
         $lines = [];
 
         $tab = 4;
-        //--- Behandlung von OR-Gruppen ---
+        //--- OR group handling ---
         if (isset($def['_type']) && $def['_type'] === 'or_group') {
 
             $groupLines = [];
@@ -906,13 +931,13 @@ class waveQl
             }
             return $lines;
         }
-        //--- Ende Gruppenbehandlung ---
+        //--- end group handling ---
 
         if (!isset($def['rowName']) || $def['rowName'] === null) {
             return $lines;
         }
 
-        //-- UNSET bedeutet Feld ignorieren
+        //-- UNSET means ignore the field
         if ($def[self::OP_EQUAL] === self::VAL_UNSET) {
             return $lines;
         }
@@ -927,7 +952,7 @@ class waveQl
             return $lines;
         }
 
-        //-- BLANK (leer oder 0 je nach Typ)
+        //-- BLANK (empty or 0 depending on type)
         if ($def[self::OP_EQUAL] === self::VAL_BLANK) {
             if (in_array($def['type'], self::NUMERIC_TYPES)) {
                 $lines[] = str_pad($def['rowName'], $pad, ' ') . ' = 0';
@@ -947,7 +972,7 @@ class waveQl
             return $lines;
         }
 
-        //-- EMPTY (NULL ODER leer)
+        //-- EMPTY (NULL OR empty)
         if ($def[self::OP_EQUAL] === self::VAL_EMPTY) {
             if (in_array($def['type'], self::NUMERIC_TYPES)) {
                 $lines[] = '(' . str_pad($def['rowName'], $pad, ' ') . ' IS NULL OR ' . str_pad($def['rowName'], $pad, ' ') . ' = 0)';
@@ -957,7 +982,7 @@ class waveQl
             return $lines;
         }
 
-        //-- NOT EMPTY (NOT NULL UND nicht leer)
+        //-- NOT EMPTY (NOT NULL AND not empty)
         if ($def[self::OP_EQUAL] === self::VAL_NOT_EMPTY) {
             if (in_array($def['type'], self::NUMERIC_TYPES)) {
                 $lines[] = '(' . str_pad($def['rowName'], $pad, ' ') . ' IS NOT NULL AND ' . str_pad($def['rowName'], $pad, ' ') . ' != 0)';
@@ -967,7 +992,7 @@ class waveQl
             return $lines;
         }
 
-        //-- Raw-Wert (escapeter String, z.B. durch Backslash)
+        //-- raw value (escaped string, e.g. via backslash)
         if ($def[self::OP_RAW] !== false) {
             if ($mode === 'prepared') {
                 $lines[] = str_pad($def['rowName'], $pad, ' ') . ' = ?';
@@ -991,7 +1016,7 @@ class waveQl
             self::OP_GREATER_EQUAL,
         ];
 
-        //-- Alle gesetzten Vergleichsoperatoren durchgehen
+        //-- iterate over all set comparison operators
         foreach ($ops as $op) {
             if ($def[$op] === false) continue;
             $val = $def[$op];
@@ -1011,7 +1036,7 @@ class waveQl
             }
         }
 
-        //-- LIKE-Operator
+        //-- LIKE operator
         if ($def[self::OP_LIKE] !== false) {
             $parts = explode('~', $def[self::OP_LIKE]);
             $escapedParts = [];
@@ -1033,10 +1058,30 @@ class waveQl
     }
 
 
+    ########################### PUBLIC QUERY METHODS
 
-    ########################### ÖFFENTLICHE QUERY-METHODEN
 
-    ### ermittelt die SELECT-Klausel
+    ##### SETS NEW INPUT VALUES AND REBUILDS THE INTERNAL STATE.
+
+    public function setInput(array $newInputValues): void
+    {
+        //-- set new input values
+        $this->inputValues = $newInputValues;
+
+        //-- only input-specific migration (skip table migration, only inputValues)
+        $this->migrateLegacyData(false, true);
+
+        //-- completely rebuild data structure (resolvedData, filters, operators)
+        $this->initData();
+
+        //-- reset prepared statement parameters (belong to previous query)
+        $this->params = [];
+        $this->types = '';
+    }
+
+
+    ##### BUILDS THE SELECT CLAUSE
+
     public function getSelectQuery(): string
     {
         $pad = 24;
@@ -1050,7 +1095,9 @@ class waveQl
         return PHP_EOL . 'SELECT' . PHP_EOL . '    ' . implode(',' . PHP_EOL . '    ', $parts);
     }
 
-    ### ermittelt die WHERE-Klausel (inkl. Suche und mysql)
+
+    ##### BUILDS THE WHERE CLAUSE (INCLUDING SEARCH AND sqlCondition)
+
     public function getWhereQuery(): string
     {
         $pad = 20;
@@ -1063,7 +1110,7 @@ class waveQl
 
         $filter = $this->getFilterParams();
 
-        //-- Volltextsuche über mehrere Felder
+        //-- full‑text search over multiple fields
         if (!empty($filter['searchString']) && is_string($filter['searchString']) && trim($filter['searchString'], '~') !== '') {
             $targets = is_string($filter['searchTarget']) ? explode(',', $filter['searchTarget']) : [];
             $searchParts = [];
@@ -1081,15 +1128,17 @@ class waveQl
             }
         }
 
-        //-- Benutzerdefinierter SQL-Teil
-        if (!empty($filter['mysql']) && is_string($filter['mysql'])) {
-            $conditions[] = '(' . PHP_EOL . '         ' . $filter['mysql'] . PHP_EOL . '        )';
+        //-- custom SQL part
+        if (!empty($filter['sqlCondition']) && is_string($filter['sqlCondition'])) {
+            $conditions[] = '(' . PHP_EOL . '         ' . $filter['sqlCondition'] . PHP_EOL . '        )';
         }
 
         return implode(PHP_EOL . '    AND ', $conditions);
     }
 
-    ### ermittelt die ORDER BY-Klausel
+
+    ##### BUILDS THE ORDER BY CLAUSE
+
     public function getOrderQuery(): string
     {
         $filter = $this->getFilterParams();
@@ -1119,8 +1168,10 @@ class waveQl
         return empty($parts) ? '' : PHP_EOL . 'ORDER BY' . PHP_EOL . '    ' . implode(',' . PHP_EOL . '    ', $parts);
     }
 
-    ### ermittelt die LIMIT-Klausel (für Paginierung)
-    public function getLimitQuery()
+
+    ##### BUILDS THE LIMIT CLAUSE (FOR PAGINATION)
+
+    public function getLimitQuery(): string|false
     {
         $filter = $this->getFilterParams();
         if ($filter['firstElemNumber'] === false) {
@@ -1129,8 +1180,10 @@ class waveQl
         return PHP_EOL . 'LIMIT ' . PHP_EOL . '    ' . $filter['firstElemNumber'] . ', ' . $filter['pageSize'] . ' ';
     }
 
-    ### baut den JOIN-Teil (aus joinList)
-    private function getJoinQuery(string $defaultType = 'LEFT')
+
+    ##### BUILDS THE JOIN PART (FROM joinList)
+
+    private function getJoinQuery(string $defaultType = 'LEFT'): string|false
     {
         $joinList = $this->getJoinList();
         if (empty($joinList)) {
@@ -1157,14 +1210,18 @@ class waveQl
         return implode(PHP_EOL, $joins);
     }
 
-    ### liefert die joinList (oder leeres Array)
+
+    ##### RETURNS THE joinList (OR EMPTY ARRAY)
+
     private function getJoinList(): array
     {
         return $this->tableInfo['joinList'] ?? [];
     }
 
-    ### ermittelt den FROM-Teil (Tabelle + Alias)
-    public function getTableQuery()
+
+    ##### BUILDS THE FROM PART (TABLE + ALIAS)
+
+    public function getTableQuery(): string|false
     {
         if (empty($this->tableInfo['tableName']) || empty($this->tableInfo['tableKey'])) {
             return false;
@@ -1174,32 +1231,40 @@ class waveQl
         return $table . ' ' . $alias;
     }
 
-    ### baut den kompletten Körper (SELECT … FROM …)
-    public function getBodyQuery()
+
+    ##### BUILDS THE COMPLETE BODY (SELECT … FROM …)
+
+    public function getBodyQuery(): string|false
     {
         $table = $this->getTableQuery();
         if (!$table) return false;
         return $this->getSelectQuery() . PHP_EOL . 'FROM ' . PHP_EOL . '    ' . $table;
     }
 
-    ### Query ohne WHERE (für Totalabfragen)
-    public function getTotalQuery()
+
+    ##### QUERY WITHOUT WHERE (FOR TOTAL QUERIES)
+
+    public function getTotalQuery(): string|false
     {
         $body = $this->getBodyQuery();
         if (!$body) return false;
         return $body . PHP_EOL . $this->getJoinQuery() . PHP_EOL . 'WHERE 1';
     }
 
-    ### komplette Query ohne LIMIT
-    public function getLimitlessQuery()
+
+    ##### COMPLETE QUERY WITHOUT LIMIT
+
+    public function getLimitlessQuery(): string|false
     {
         $body = $this->getBodyQuery();
         if (!$body) return false;
         return $body . PHP_EOL . $this->getJoinQuery() . $this->getWhereQuery();
     }
 
-    ### baut eine COUNT-Abfrage (optional total = nur WHERE 1)
-    public function getCountQuery(bool $total = false)
+
+    ##### BUILDS A COUNT QUERY (OPTIONAL total = ONLY WHERE 1)
+
+    public function getCountQuery(bool $total = false): string|false
     {
         $table = $this->getTableQuery();
         if (!$table) return false;
@@ -1207,19 +1272,22 @@ class waveQl
         return 'SELECT' . PHP_EOL . '    count(*) as count FROM ' . PHP_EOL . '    ' . $table . $this->getJoinQuery() . $where;
     }
 
-    ### liefert die vollständige SELECT-Query (mit ORDER und LIMIT)
-    public function getQuery()
+
+    ##### RETURNS THE FULL SELECT QUERY (WITH ORDER AND LIMIT)
+
+    public function getQuery(): string|false
     {
         $limitless = $this->getLimitlessQuery();
         return $limitless ? $limitless . $this->getOrderQuery() . $this->getLimitQuery() : false;
     }
 
 
-
     ########################### PREPARED STATEMENTS
 
-    ### bereitet die Query für Prepared Statements vor (gibt Query, Parameter, Typen zurück)
-    public function getPreparedQuery()
+
+    ##### PREPARES THE QUERY FOR PREPARED STATEMENTS (RETURNS QUERY, PARAMETERS, TYPES)
+
+    public function getPreparedQuery(): array|false
     {
         $this->params = [];
         $this->types = '';
@@ -1239,14 +1307,16 @@ class waveQl
         ];
     }
 
-    ### führt die Query aus (je nach usePrepared mit oder ohne Prepared)
-    public function execute(string $fetchMode = 'assoc')
+
+    ##### EXECUTES THE QUERY (DEPENDING ON usePrepared)
+
+    public function execute(string $fetchMode = 'assoc'): array|int
     {
         if ($this->usePrepared) {
             $prep = $this->getPreparedQuery();
-            if (!$prep) throw new \Exception('Keine gültige Query.');
+            if (!$prep) throw new \Exception('No valid query.');
             $stmt = $this->db->prepare($prep['query']);
-            if (!$stmt) throw new \Exception('Prepare fehlgeschlagen: ' . $this->db->error);
+            if (!$stmt) throw new \Exception('Prepare failed: ' . $this->db->error);
             if (!empty($prep['params'])) {
                 $stmt->bind_param($prep['types'], ...$prep['params']);
             }
@@ -1260,9 +1330,9 @@ class waveQl
             return $stmt->affected_rows;
         } else {
             $query = $this->getQuery();
-            if (!$query) throw new \Exception('Keine gültige Query.');
+            if (!$query) throw new \Exception('No valid query.');
             $result = $this->db->query($query);
-            if (!$result) throw new \Exception('Query fehlgeschlagen: ' . $this->db->error);
+            if (!$result) throw new \Exception('Query failed: ' . $this->db->error);
             if ($result instanceof \mysqli_result) {
                 $data = $fetchMode === 'assoc' ? $result->fetch_all(MYSQLI_ASSOC) : $result->fetch_all(MYSQLI_NUM);
                 $result->free();
@@ -1272,8 +1342,10 @@ class waveQl
         }
     }
 
-    ### baut den Körper der Query für Prepared Statements (SELECT … FROM … JOIN … WHERE)
-    private function buildBodyPrepared()
+
+    ##### BUILDS THE BODY OF THE QUERY FOR PREPARED STATEMENTS (SELECT … FROM … JOIN … WHERE)
+
+    private function buildBodyPrepared(): string|false
     {
         $table = $this->getTableQuery();
         if (!$table) return false;
@@ -1281,20 +1353,26 @@ class waveQl
             . $this->buildJoinPrepared() . $this->buildWherePrepared();
     }
 
-    ### SELECT-Teil für Prepared (identisch zu getSelectQuery)
+
+    ##### SELECT PART FOR PREPARED (IDENTICAL TO getSelectQuery)
+
     private function buildSelectPrepared(): string
     {
         return $this->getSelectQuery();
     }
 
-    ### JOIN-Teil für Prepared
+
+    ##### JOIN PART FOR PREPARED
+
     private function buildJoinPrepared(): string
     {
         $join = $this->getJoinQuery();
         return $join ? PHP_EOL . $join : '';
     }
 
-    ### WHERE-Teil für Prepared (mit Platzhaltern)
+
+    ##### WHERE PART FOR PREPARED (WITH PLACEHOLDERS)
+
     private function buildWherePrepared(): string
     {
         $pad = 20;
@@ -1324,37 +1402,44 @@ class waveQl
             }
         }
 
-        if (!empty($filter['mysql']) && is_string($filter['mysql'])) {
-            $conditions[] = '(' . PHP_EOL . '         ' . $filter['mysql'] . PHP_EOL . '        )';
+        if (!empty($filter['sqlCondition']) && is_string($filter['sqlCondition'])) {
+            $conditions[] = '(' . PHP_EOL . '         ' . $filter['sqlCondition'] . PHP_EOL . '        )';
         }
 
         return implode(PHP_EOL . '    AND ', $conditions);
     }
 
-    ### ORDER BY für Prepared (identisch)
+
+    ##### ORDER BY FOR PREPARED (IDENTICAL)
+
     private function buildOrderPrepared(): string
     {
         return $this->getOrderQuery();
     }
 
-    ### LIMIT für Prepared (identisch)
-    private function buildLimitPrepared()
+
+    ##### LIMIT FOR PREPARED (IDENTICAL)
+
+    private function buildLimitPrepared(): string|false
     {
         return $this->getLimitQuery();
     }
 
-    ### fügt einen Parameter für Prepared Statements hinzu
-    private function addParam($value, string $type): void
+
+    ##### ADDS A PARAMETER FOR PREPARED STATEMENTS
+
+    private function addParam(mixed $value, string $type): void
     {
         $this->params[] = $value;
         $this->types .= $type;
     }
 
 
+    ########################### HELPER METHODS
 
-    ########################### HILFSMETHODEN
 
-    ### liefert die Hauptparameter (alle Felder außer Filter)
+    ##### RETURNS THE MAIN PARAMETERS (ALL FIELDS EXCEPT FILTER)
+
     private function getMainParams(): array
     {
         $data = $this->resolvedData;
@@ -1362,22 +1447,26 @@ class waveQl
         return $data;
     }
 
-    ### liefert die Filter-Parameter
+
+    ##### RETURNS THE FILTER PARAMETERS
+
     private function getFilterParams(): array
     {
         return $this->resolvedData[self::GROUP_FILTER] ?? [];
     }
 
-    ### quotet Identifier (Tabellen-/Spaltennamen) mit Backticks, außer bei Funktionen
+
+    ##### QUOTES IDENTIFIERS (TABLE/COLUMN NAMES) WITH BACKTICKS, EXCEPT FUNCTIONS
+
     private function quoteIdentifier(string $name, bool $splitDot = false): string
     {
-        if ($name === null) {
+        if ($name === '') {
             return '';
         }
         $name = trim($name);
         if ($name === '') return '';
 
-        //-- Wenn die Zeichenfolge eine Klammer enthält, nehmen wir an, es ist ein Funktionsaufruf -> nicht quoten
+        //-- if the string contains parentheses, assume it's a function call → do not quote
         if (strpos($name, '(') !== false) {
             return $name;
         }
@@ -1397,7 +1486,9 @@ class waveQl
         return '`' . $name . '`';
     }
 
-    ### wandelt einen Operator-Konstante in SQL um
+
+    ##### CONVERTS AN OPERATOR CONSTANT TO SQL
+
     private function operatorToSql(string $op): string
     {
         static $map = [
@@ -1411,23 +1502,29 @@ class waveQl
         return $map[$op] ?? '=';
     }
 
-    ### escaped % und _ für LIKE-Abfragen
+
+    ##### ESCAPES % AND _ FOR LIKE QUERIES
+
     private function getEscapedLikeString(string $string): string
     {
         return str_replace(['%', '_'], ['\%', '\_'], $string);
     }
 
-    ### ermittelt den Bind-Typ für Prepared Statements anhand des Feldtyps
+
+    ##### DETERMINES THE BIND TYPE FOR PREPARED STATEMENTS BASED ON FIELD TYPE
+
     private function typeToBindParam(string $type): string
     {
         if ($type === self::TYPE_FLOAT) return 'd';
         return in_array($type, self::NUMERIC_TYPES) ? 'i' : 's';
     }
 
-    ### prüft, ob ein benutzerdefinierter SQL-Ausdruck sicher ist (keine DDL/DML, keine Kommentare, kein UNION)
-    private function isMysqlSafe(string $sql): bool
+
+    ##### CHECKS IF A CUSTOM SQL EXPRESSION IS SAFE (NO DDL/DML, NO COMMENTS, NO UNION)
+
+    private function isSqlConditionSafe(string $sql): bool
     {
-        //-- Kommentare entfernen
+        //-- remove comments
         while (preg_match('/\/\*.*?\*\//s', $sql)) {
             $sql = preg_replace('/\/\*.*?\*\//s', '', $sql);
         }
@@ -1435,29 +1532,33 @@ class waveQl
         $sql = preg_replace('/#.*$/m', '', $sql);
 
         $blacklist = [
-            '/\bDELETE\b/i',
-            '/\bINSERT\b/i',
-            '/\bUPDATE\b/i',
-            '/\bREPLACE\b/i',
-            '/\bTRUNCATE\b/i',
-            '/\bCREATE\b/i',
             '/\bALTER\b/i',
+            '/\bCALL\b/i',
+            '/\bCREATE\b/i',
+            '/\bDELETE\b/i',
+            '/\bDO\b/i',
             '/\bDROP\b/i',
-            '/\bRENAME\b/i',
+            '/\BENCHMARK\s*\(/i',
             '/\bEXEC\b/i',
             '/\bEXECUTE\b/i',
-            '/\bCALL\b/i',
-            '/\bDO\b/i',
-            '/\bHANDLER\b/i',
             '/\bFLUSH\b/i',
-            '/\bRESET\b/i',
-            '/\bPURGE\b/i',
+            '/\bHANDLER\b/i',
+            '/\bINSERT\b/i',
             '/\bINSTALL\b/i',
+            '/\bINTO\s+DUMPFILE\b/i',
+            '/\bINTO\s+OUTFILE\b/i',
+            '/\bLOAD_FILE\b/i',
+            '/\bPG_SLEEP\b/i',
+            '/\bPURGE\b/i',
+            '/\bRENAME\b/i',
+            '/\bREPLACE\b/i',
+            '/\bRESET\b/i',
+            '/\bSLEEP\s*\(/i',
+            '/\bTRUNCATE\b/i',
             '/\bUNINSTALL\b/i',
             '/\bUNION\b/i',
-            '/\bLOAD_FILE\b/i',
-            '/\bINTO\s+OUTFILE\b/i',
-            '/\bINTO\s+DUMPFILE\b/i',
+            '/\bUPDATE\b/i',
+            '/\bWAIT_FOR\b/i',
             '/;/',
         ];
 
@@ -1474,7 +1575,9 @@ class waveQl
         return true;
     }
 
-    //--- Öffentliche Getter (für Debugging / Weiterverarbeitung)
+
+    ########################### PUBLIC GETTERS (FOR DEBUGGING / FURTHER PROCESSING)
+
 
     public function getResolvedData(): array
     {
