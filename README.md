@@ -127,8 +127,11 @@ $input = [
     ]
 ];
 
-$builder = new waveQl($db, $tableInfo, $fieldDefinitions, $input, ['prepared' => false]);
-echo $builder->getQuery();
+
+$builder = new waveQl($db, $tableInfo, $fieldDefinitions); 
+$builder->setInput($input);         // now apply the filters
+$sql = $builder->getQuery();        // get the final SQL
+echo $sql;
 
 ```
 
