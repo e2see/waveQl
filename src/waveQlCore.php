@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace e2;
@@ -41,6 +42,9 @@ abstract class waveQlCore
 
     protected array $preparedParams = [];
     protected string $preparedTypes = '';
+
+    protected readonly bool $optionVirtualDateFields;
+    protected readonly bool $optionAllowSqlCondition;
 
     ########################### OPERATOR-KÜRZEL
 
@@ -127,23 +131,36 @@ abstract class waveQlCore
     ##### Konstruktor – initialisiert die Manifeste und generiert automatische Felder.
     public function __construct(waveQlDbInterface $db, array $tableManifest, array $keyManifest, array $options = [])
     {
+
+        $this->optionVirtualDateFields = $options['virtualDateFields'] ?? true;
+        $this->optionAllowSqlCondition = $options['allowSqlCondition'] ?? false;
+
+
         $this->db            = $db;
         $Migrated            = $this->migrateLegacyData($tableManifest, $keyManifest);
         $this->metaManifest  = $this->validateMetaManifest($Migrated['keyManifest'][self::GROUP_META] ?? [], $Migrated['tableManifest'][self::GROUP_META] ?? []);
         $this->tableManifest = $this->validateTableManifest($Migrated['tableManifest']);
-        $keyManifest = $this->validateKeyManifest($Migrated['keyManifest']);
+        $keyManifest         = $this->validateKeyManifest($Migrated['keyManifest']);
 
         //-- Generiere virtuelle Datumsfelder (z. B. feldYEAR)
-        foreach ($keyManifest as $key => $config) {
-            $autoFields = $this->generateAutoFields($key, $config);
-            foreach ($autoFields as $autoKey => $autoDef) {
-                $keyManifest[$autoKey] = $autoDef;
+
+        if ($this->optionVirtualDateFields) {
+            $baseKeyManifest = $keyManifest;
+            foreach ($baseKeyManifest as $key => $config) {
+                $autoFields = $this->generateAutoFields($key, $config);
+                foreach ($autoFields as $autoKey => $autoDef) {
+                    $keyManifest[$autoKey] = $autoDef;
+                }
             }
         }
         $this->keyManifest = $keyManifest;
+
+
         unset($Migrated, $keyManifest);
+
         $this->keyManifestLive  = $this->keyManifest;
         $this->metaManifestLive = $this->metaManifest;
+
         $this->updateLive(null, null, true, true);
     }
 
@@ -204,17 +221,8 @@ abstract class waveQlCore
             $this->metaManifestLive = [];
         }
 
-        //-- Typkonvertierung für numerische Meta-Felder
-        foreach ($metaArr as $key => $val) {
-            if (is_string($val)) {
-                $val = trim($val);
-                if (in_array($key, ['pageNumber', 'pageSize', 'firstElemNumber']) && ctype_digit($val)) {
-                    $val = (int) $val;
-                }
-            }
-            $this->metaManifestLive[$key] = $val;
-        }
-        $this->validateMetaPagination($this->metaManifestLive);
+        $metaArr = $this->validateMetaManifest($metaArr);
+        $this->metaManifestLive = $metaArr;
     }
 
     ##### Füllt fehlende Meta‑Felder mit Defaults.
@@ -230,10 +238,10 @@ abstract class waveQlCore
             } elseif (isset($prio3[$f]) && (is_string($prio3[$f]) || is_numeric($prio3[$f]))) {
                 $meta[$f] = trim((string)$prio3[$f]);
             } else {
-                $meta[$f] = false;
+                $meta[$f] = '';
             }
             if ($meta[$f] === self::VAL_UNSET) {
-                $meta[$f] = false;
+                $meta[$f] = '';
             }
         }
         return $meta;
@@ -248,8 +256,8 @@ abstract class waveQlCore
         }
         $validSorts = [];
         foreach ($sortItems as $item) {
-            $item = trim($item);
-            $sign = '';
+            $item      = trim($item);
+            $sign      = '';
             $maybeSign = mb_substr($item, 0, 1);
             if ($maybeSign === self::SORT_DESC || $maybeSign === self::SORT_ASC) {
                 $sign = $maybeSign;
@@ -266,6 +274,7 @@ abstract class waveQlCore
     protected function validateMetaManifest(array $metaArr1 = [], array $metaArr2 = [], array $metaArr3 = []): array
     {
         $metaArr = $this->mergeAndFullfillMeta($metaArr1, $metaArr2, $metaArr3);
+
         $metaArr['sort'] = $this->validateMetaManifest_sort($metaArr['sort'] ?? '', $this->keyManifest[self::GROUP_META]['sort'] ?? '');
 
         //-- Suchziele validieren
@@ -282,25 +291,65 @@ abstract class waveQlCore
         }
         $metaArr['searchTarget'] = $validTargets ? implode(',', $validTargets) : ($this->keyManifest[self::GROUP_META]['searchTarget'] ?? '');
 
-        $this->validateMetaPagination($metaArr);
+        $this->validateMetaManifest_pagination($metaArr);
+        $this->validateMetaManifest_sqlCondition($metaArr);
 
-        //-- Sicherheitscheck für benutzerdefiniertes SQL
-        $sqlCondition = '';
-        if (is_string($metaArr['sqlCondition'])) {
-            $sqlCondition = trim($metaArr['sqlCondition']);
-        }
-        if ($sqlCondition !== '') {
-            $this->isSqlConditionSafe($sqlCondition);
-            $sqlCondition = trim($sqlCondition);
-            $metaArr['sqlCondition'] = $sqlCondition !== '' ? $sqlCondition : false;
-        } else {
-            $metaArr['sqlCondition'] = false;
-        }
         return $metaArr;
     }
 
+
     ##### Berechnet firstElemNumber aus pageNumber und pageSize.
-    protected function validateMetaPagination(array &$input): void
+    protected function validateMetaManifest_sqlCondition(array &$input): void
+    {
+        //-- Sicherheitscheck für benutzerdefiniertes SQL
+        $sqlCondition = '';
+        if (is_string($input['sqlCondition'])) {
+            $sqlCondition = trim($input['sqlCondition']);
+        }
+        if ($sqlCondition !== '') {
+            if (!$this->optionAllowSqlCondition) {
+                throw new waveQlSecurityException('Custom SQL conditions are disabled. Set allowSqlCondition=>true to enable.');
+            }
+
+            $sqlCondition = $this->replaceLogicalNamesInSql($sqlCondition);
+            $this->isSqlConditionSafe($sqlCondition);
+            $sqlCondition = trim($sqlCondition);
+            $input['sqlCondition'] = $sqlCondition !== '' ? $sqlCondition : false;
+        } else {
+            $input['sqlCondition'] = false;
+        }
+    }
+
+
+
+    protected function replaceLogicalNamesInSql(string $sql): string
+    {
+        $logicalNames = [];
+        foreach ($this->keyManifest as $name => $config) {
+            if (strpos($name, '~') === 0) continue; // ~meta~, ~or~ überspringen
+            $logicalNames[] = $name;
+        }
+        if (empty($logicalNames)) return $sql;
+
+        // Nach Länge absteigend sortieren
+        usort($logicalNames, fn($a, $b) => strlen($b) - strlen($a));
+
+        $replacements = [];
+        foreach ($logicalNames as $name) {
+            $detail = $this->getFieldDetail($name);
+            if (!$detail || empty($detail['fullQuoted'])) continue;
+            $quotedFull = $detail['fullQuoted']; // z.B. `pr`.`extension`
+            $pattern = '/\b' . preg_quote($name, '/') . '\b/i';
+            $replacements[$pattern] = $quotedFull;
+        }
+
+        return preg_replace(array_keys($replacements), array_values($replacements), $sql);
+    }
+
+
+
+    ##### Berechnet firstElemNumber aus pageNumber und pageSize.
+    protected function validateMetaManifest_pagination(array &$input): void
     {
         $pageSize = abs((int)($input['pageSize'] ?? 0));
         $pageNumber = abs((int)($input['pageNumber'] ?? 0));

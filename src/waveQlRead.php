@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace e2;
@@ -30,14 +31,15 @@ namespace e2;
  */
 class waveQlRead extends waveQlCore
 {
-    protected bool $usePrepared;
+
+    protected readonly bool $optionPrepared;
 
     ########################### KONSTRUKTOR
 
     public function __construct(waveQlDbInterface $db, array $tableManifest, array $keyManifest, array $options = [])
     {
         parent::__construct($db, $tableManifest, $keyManifest, $options);
-        $this->usePrepared = $options['prepared'] ?? false;
+        $this->optionPrepared = $options['prepared'] ?? false;
     }
 
     ########################### API-METHODEN
@@ -59,7 +61,8 @@ class waveQlRead extends waveQlCore
     ##### Führt die Query aus und liefert das Ergebnis als Array
     public function execute(): array|int
     {
-        if ($this->usePrepared) {
+
+        if ($this->optionPrepared) {
             $prep = $this->getPreparedQuery();
             if (!$prep) {
                 throw new waveQlQueryException('Keine gültige Query.');
