@@ -69,7 +69,15 @@ if ($waveQlAvailable) {
 // Field definitions (nur wenn waveQl verfügbar)
 // ----------------------------------------------------------------------
 if ($waveQlAvailable) {
-    // Basis-Manifest (ohne Autofelder)
+
+    // Optionen: Core generiert automatisch die virtuellen Datumsfelder
+    $waveOptions = [
+        'prepared'          => false,
+        'virtualDateFields' => true,   // Core generiert YEAR, MONTH, DAY, ...
+        'allowSqlCondition' => false,
+    ];
+
+    // Basis-Manifest (ohne virtuelle Felder – der Core fügt sie hinzu)
     $baseKeyManifest = [
         'CountryName'    => ['rowName' => 'c.name',          'type' => 'string'],
         'Population'     => ['rowName' => 'c.population',    'type' => 'integer'],
@@ -85,39 +93,27 @@ if ($waveQlAvailable) {
         ],
     ];
 
-    // --- Automatische Zusatzfelder für dateTime-Felder generieren (wie im Core) ---
-    $autoFieldMap = [
-        'DATE'    => 'date',
-        'YEAR'    => 'year',
-        'QUARTER' => 'quarter',
-        'MONTH'   => 'month',
-        'DAY'     => 'day',
-        'TIME'    => 'time',
-        'HOUR'    => 'hour',
-        'MINUTE'  => 'minute',
-        'UNIX_TIMESTAMP' => 'uts',
-    ];
-
-    $keyManifest = $baseKeyManifest;
-    $dateFields = []; // speichert Basis-Feldnamen, für die Autofelder existieren
+    // Für die UI: Alle logischen Feldnamen, die später im Core generiert werden.
+    // Basis-Felder plus für jedes date/dateTime-Feld die virtuellen Ableitungen.
+    $filterFields = array_keys(array_diff_key($baseKeyManifest, ['~meta~' => 0]));
+    $dateFields = [];
+    // Die Suffixe entsprechen denen, die der Core in generateAutoFields() verwendet (Großbuchstaben)
+    $virtualSuffixes = ['YEAR', 'MONTH', 'DAY', 'HOUR', 'MINUTE', 'QUARTER', 'DATE', 'TIME', 'UTS'];
     foreach ($baseKeyManifest as $key => $def) {
         if (isset($def['type']) && in_array($def['type'], ['date', 'dateTime'])) {
             $dateFields[] = $key;
-            $baseRowName = $def['rowName'];
-            foreach ($autoFieldMap as $sqlFunc => $subType) {
-                $autoKey = $key . strtoupper($subType);
-                if (!isset($keyManifest[$autoKey])) {
-                    $keyManifest[$autoKey] = [
-                        'rowName' => "$sqlFunc($baseRowName)",
-                        'type'    => $subType,
-                    ];
+            foreach ($virtualSuffixes as $suffix) {
+                $virtualName = $key . $suffix;
+                if (!in_array($virtualName, $filterFields)) {
+                    $filterFields[] = $virtualName;
                 }
             }
         }
     }
 
-    // Alle Filterfelder (alle Schlüssel außer ~meta~)
-    $filterFields = array_keys(array_diff_key($keyManifest, ['~meta~' => 0]));
+    // Das tatsächliche keyManifest für waveQl ist identisch zum Basis-Manifest
+    // Der Core erweitert es automatisch um die virtuellen Felder (wegen virtualDateFields=true)
+    $keyManifest = $baseKeyManifest;
 
     $tableManifest = [
         'tableName' => 'countries',
@@ -146,7 +142,7 @@ $writeData = [];
 if ($waveQlAvailable) {
     try {
         if ($mode === 'read') {
-            // Dynamisch alle Filterfelder aus dem POST holen
+            // Alle Filterfelder aus dem POST holen (inkl. virtueller)
             foreach ($filterFields as $field) {
                 if (isset($_POST[$field]) && $_POST[$field] !== '') {
                     $filter[$field] = trim($_POST[$field]);
@@ -175,7 +171,6 @@ if ($waveQlAvailable) {
     }
 }
 
-
 // ----------------------------------------------------------------------
 // Execute with waveQl
 // ----------------------------------------------------------------------
@@ -185,13 +180,12 @@ $execError = null;
 
 if ($waveQlAvailable && $action !== '') {
     try {
-        $wave = \e2\waveQl::create($mysqli, $tableManifest, $keyManifest, ['prepared' => false]);
+        $wave = \e2\waveQl::create($mysqli, $tableManifest, $keyManifest, $waveOptions);
 
         if ($mode === 'read') {
             $builder = $wave->read();
             if (!empty($meta)) $builder->setMeta($meta);
             if (!empty($filter)) $builder->setValues($filter);
-
 
             if ($action === 'query') {
                 $sql = $builder->getQuery();
@@ -234,6 +228,7 @@ if ($result !== null && $mode === 'read' && $action === 'execute') {
         }
         echo '</thead><tbody>';
         foreach ($result as $row) {
+            echo '<tr>';
             foreach ($row as $value) {
                 echo '<td>' . htmlspecialchars($value ?? 'NULL') . '</td>';
             }
@@ -276,10 +271,6 @@ function initDatabase($mysqli, $testDir)
     }
     return "Database initialised successfully!";
 }
-
-
-
-
 
 // ----------------------------------------------------------------------
 // Include template
