@@ -31,6 +31,8 @@ namespace e2;
 interface waveQlDbInterface
 {
 
+    #my test to push
+
     ##### Führt eine Query direkt aus (nicht vorbereitet).
     public function query(string $sql): mixed;
 
