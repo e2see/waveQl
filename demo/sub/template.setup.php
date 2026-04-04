@@ -9,7 +9,9 @@
 </head>
 
 <body>
-    <img src="../images/logo-s.png" alt="waveQl Logo" id="logo" />
+    <div class="logo-container">
+        <img src="../images/logo-s.png" alt="waveQl Logo" id="logo" />
+    </div>
     <h1>waveQl Test Environment – Setup</h1>
 
     <div class="message <?= strpos($setupMessage, '❌') !== false ? 'error' : 'warning' ?>">
@@ -18,23 +20,26 @@
 
     <?php if (!$connectionOk): ?>
         <div class="config-details">
-            <p>Aktuelle Konfiguration (<code>config.php</code>):</p>
+            <p>Current configuration (<code>config.php</code>):</p>
             <ul>
                 <li>Host: <strong><?= htmlspecialchars($maskedHost) ?></strong></li>
-                <li>Benutzer: <strong><?= htmlspecialchars($maskedUser) ?></strong></li>
-                <li>Datenbank: <strong><?= htmlspecialchars($maskedDb) ?></strong></li>
+                <li>User: <strong><?= htmlspecialchars($maskedUser) ?></strong></li>
+                <li>Database: <strong><?= htmlspecialchars($maskedDb) ?></strong></li>
             </ul>
-            <p>Bitte korrigieren Sie die Zugangsdaten in der <code>config.php</code>.</p>
+            <p>Please correct the credentials in <code>config.php</code>.</p>
         </div>
     <?php elseif (!$tableExists): ?>
         <div class="config-details">
-            <p>Die Verbindung zur Datenbank <strong><?= htmlspecialchars($maskedDb) ?></strong> ist erfolgreich.</p>
-            <p>Die Tabelle <code>countries</code> fehlt jedoch.</p>
-            <form method="get" action="">
-                <input type="hidden" name="initSQL" value="1">
-                <button type="submit">📦 Datenbank automatisch initialisieren (setup.sql ausführen)</button>
-            </form>
-            <p>Oder führen Sie die <code>setup.sql</code> manuell aus.</p>
+            <p>Connection to database <strong><?= htmlspecialchars($maskedDb) ?></strong> successful.</p>
+            <p>However, the <code>countries</code> table is missing.</p>
+            <?php if ($allowInitSQL): ?>
+                <form method="get" action="">
+                    <input type="hidden" name="initSQL" value="1">
+                    <button type="submit">📦 Automatically initialise database (run setup.sql)</button>
+                </form>
+            <?php else: ?>
+                <p>Automatic initialisation is disabled in the configuration. Please run <code>setup.sql</code> manually.</p>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 

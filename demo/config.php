@@ -14,17 +14,21 @@
  *
  */
 
-
 $host   = 'localhost';
 $user   = 'root';
 $pass   = '';
 $dbname = 'waveql_test';
 
+// ----- Security settings for demo mode -----
+$allowRead    = true;   // Read mode (SELECT) allowed
+$allowWrite   = false;  // Write mode (INSERT/UPDATE/DELETE) allowed
+$allowInitSQL = true;  // Automatic table initialisation via ?initSQL=1 allowed
+
 $mysqli            = null;
 $dbConnectionError = '';
 
 try {
-    $mysqli = new mysqli($host, $user, $pass);
+    @$mysqli = new mysqli($host, $user, $pass);
     if ($mysqli->connect_error) {
         throw new Exception($mysqli->connect_error);
     }

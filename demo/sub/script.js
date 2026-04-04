@@ -1,5 +1,26 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    // Presets aus JSON laden (sub/presets.json)
+    // ----- Logo hover: disappears (opacity 0.2, click-through) for 3 seconds -----
+    const logo = document.getElementById('logo');
+    if (logo) {
+        let hideTimeout = null;
+
+        function startHideTimer() {
+            if (hideTimeout) clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(() => {
+                logo.classList.remove('logo-hidden');
+                hideTimeout = null;
+            }, 2000);
+        }
+
+        logo.addEventListener('mouseenter', () => {
+            logo.classList.add('logo-hidden');
+            startHideTimer();
+        });
+
+        // Do nothing on mouseleave – timer will remove class after 2 seconds from last enter
+    }
+
+    // ----- Load presets from JSON -----
     let presets = [];
     try {
         const response = await fetch('sub/presets.json');
@@ -31,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         allInputs.forEach(input => {
             if (input.type !== 'submit' && input.type !== 'button' && input.name) {
                 if (input.tagName === 'SELECT') {
-                    // nichts tun
+                    // nothing
                 } else {
                     input.value = '';
                 }
@@ -90,7 +111,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // Radio-Status basierend auf HTML checked-Attribut erzwingen (gegen Browser-Cache)
     function enforceRadioState() {
         const radios = document.querySelectorAll('input[name="mode"]');
         let checkedRadio = null;
@@ -113,6 +133,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         readRadio.checked = true;
     }
 
-    enforceRadioState();   // zusätzliche Absicherung
+    enforceRadioState();
     initDateSelectors();
 });

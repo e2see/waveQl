@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Kopf für Setup-Modus: Stellt maskierte Config-Werte und Meldung bereit.
+ * Header for setup mode: Provides masked config values and message.
  */
 
 function maskValue($value)
@@ -17,7 +17,7 @@ $maskedDb   = maskValue($dbname);
 
 $setupMessage = '';
 if (!$connectionOk) {
-    $setupMessage = '❌ Datenbankverbindung fehlgeschlagen. Bitte überprüfen Sie die Zugangsdaten.';
+    $setupMessage = '❌ Database connection failed. Please check your credentials.';
 } elseif (!$tableExists) {
-    $setupMessage = '⚠️ Die Tabelle <code>countries</code> existiert noch nicht. Bitte initialisieren Sie die Datenbank.';
+    $setupMessage = '⚠️ The table <code>countries</code> does not exist yet. Please initialise the database.';
 }

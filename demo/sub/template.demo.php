@@ -10,11 +10,18 @@
 </head>
 
 <body>
-    <img src="../images/logo-s.png" alt="waveQl Logo" id="logo" />
+    <div class="logo-container">
+        <img src="../images/logo-s.png" alt="waveQl Logo" id="logo" />
+    </div>
     <h1>waveQl Test Environment</h1>
-    <p><a href="?initSQL=1">Click here to reset / initialise the database</a></p>
 
-    <div class="presets" id="presetContainer"></div>
+    <?php if ($allowInitSQL): ?>
+        <p><a href="?initSQL=1">Click here to reset / initialise the database</a></p>
+    <?php else: ?>
+        <p><span class="disabled-element" style="cursor: default;">Reset / initialise database (disabled in config)</span></p>
+    <?php endif; ?>
+
+    <div class="presets <?= !$allowRead ? 'disabled-element' : '' ?>" id="presetContainer"></div>
 
     <?php if ($initMessage): ?>
         <div class="message <?= strpos($initMessage, 'successfully') !== false ? 'success' : 'error' ?>">
@@ -26,14 +33,22 @@
         <div class="message error"><?= $errorMsg ?></div>
     <?php endif; ?>
 
+    <?php if (!$allowRead && !$allowWrite): ?>
+        <div class="message error">Neither Read nor Write mode is allowed. Please check configuration.</div>
+    <?php elseif (!$allowRead): ?>
+        <div class="message warning">Read mode is disabled. Only write operations allowed.</div>
+    <?php elseif (!$allowWrite): ?>
+        <div class="message warning">Write mode is disabled. Only read operations allowed.</div>
+    <?php endif; ?>
+
     <div class="dashboard-row dash-result">
         <div class="dashboard-card">
             <div class="card-header">📋 Field Definitions</div>
-            <pre class="code-block"><?= highlight_string("<?php\n" . print_r($keyManifest, true) . "\n?>", true) ?></pre>
+            <pre class="code-block"><?= json_encode($keyManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?></pre>
         </div>
         <div class="dashboard-card">
             <div class="card-header">🔍 Current Filter</div>
-            <pre class="code-block"><?= highlight_string("<?php\n" . print_r($filter, true) . "\n?>", true) ?></pre>
+            <pre class="code-block"><?= json_encode($filter, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?></pre>
         </div>
         <div class="dashboard-card">
             <div class="card-header">📄 Generated SQL</div>
@@ -56,7 +71,7 @@
                 <fieldset class="compact-fieldset">
                     <legend>Filters</legend>
                     <?php
-                    // Gruppiere Felder: Basis-Datumsfelder vs. normale Felder
+                    // Group fields: base date fields vs. normal fields
                     $normalFields = [];
                     $dateFieldGroups = [];
                     if (!isset($dateFields)) $dateFields = [];
@@ -109,7 +124,7 @@
                                 $datalistOptions = $continentNames ?? [];
                                 break;
                             default:
-                                $placeholder = 'z.B. 5><9 oder >3';
+                                $placeholder = 'e.g. 5><9 or >3';
                                 break;
                         }
                     ?>
@@ -124,12 +139,12 @@
                         <?php endif; ?>
                     <?php endforeach; ?>
 
-                    <!-- Datumsfelder mit Selectbox -->
+                    <!-- Date fields with select box -->
                     <?php foreach ($dateFieldGroups as $baseField => $autoFields): ?>
                         <?php
                         $currentField = $_POST[$baseField . '_selector'] ?? $baseField;
                         $inputValue = $_POST[$currentField] ?? '';
-                        $placeholder = 'z.B. 5><9 oder >3';
+                        $placeholder = 'e.g. 5><9 or >3';
                         ?>
                         <div class="date-field-group" data-datefield="<?= $baseField ?>">
                             <label><?= htmlspecialchars($baseField) ?>:</label>
@@ -174,15 +189,18 @@
                     <div class="control-group">
                         <label>Mode:</label>
                         <label class="radio-label">
-                            <input type="radio" name="mode" value="read" <?= $mode === 'read' ? 'checked' : '' ?>> Read (SELECT)
+                            <input type="radio" name="mode" value="read" <?= $mode === 'read' ? 'checked' : '' ?> <?= !$allowRead ? 'disabled' : '' ?>>
+                            Read (SELECT)
                         </label>
                         <label class="radio-label">
-                            <input type="radio" name="mode" value="write" <?= $mode === 'write' ? 'checked' : '' ?>> Write (INSERT)
+                            <input type="radio" name="mode" value="write" <?= $mode === 'write' ? 'checked' : '' ?> <?= !$allowWrite ? 'disabled' : '' ?>>
+                            Write (INSERT)
                         </label>
                     </div>
                     <div class="control-group">
-                        <button type="submit" name="action" value="query">Show SQL only</button>
-                        <button type="submit" name="action" value="execute">Show SQL and execute</button>
+                        <?php $actionDisabled = (!$allowRead && !$allowWrite) ? 'disabled' : ''; ?>
+                        <button type="submit" name="action" value="query" <?= $actionDisabled ?> class="<?= $actionDisabled ? 'disabled-element' : '' ?>">Show SQL only</button>
+                        <button type="submit" name="action" value="execute" <?= $actionDisabled ?> class="<?= $actionDisabled ? 'disabled-element' : '' ?>">Show SQL and execute</button>
                     </div>
                 </fieldset>
             </div>

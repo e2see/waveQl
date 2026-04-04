@@ -55,7 +55,7 @@ Features – what awaits you
 <br><br>
 ◤◤◤ Quick Example
 
-Imagine you have a users table with related orders.
+Imagine you have the following countries and continents tables.
 This is how easy it is with waveQl:
 
 ```php
@@ -171,10 +171,9 @@ LIMIT
 
 Done. No manual WHERE fiddling, no mistakes with forgotten parentheses.
 
+<br />
 
-
-*And there you have it – the matching records, complete with those handy auto‑generated date/time columns.
-Want to give it a spin yourself? The included demo UI lets you experiment with all operators, magic keys, and joins live.*
+And there you have it – the matching records, complete with those handy auto‑generated date/time columns.
 
 
 ```sql
@@ -197,6 +196,8 @@ FoundedDate       | 1923-10-29      | 1947-08-14      | 1945-08-17      | 1947-0
 ContinentName     | Asia            | Asia            | Asia            | Asia
 
 ```
+
+Want to give it a spin yourself? The included demo UI lets you experiment with all operators, magic keys, and joins live.
 
 
 <br><br>

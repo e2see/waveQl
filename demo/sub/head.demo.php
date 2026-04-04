@@ -1,10 +1,9 @@
 <?php
 
-
 $initMessage = '';
 
 // ----------------------------------------------------------------------
-// waveQl-Pfad und Autoload
+// waveQl path and autoload
 // ----------------------------------------------------------------------
 $waveQlDir     = __DIR__ . '/../../src/';
 $requiredFiles = ['waveQl.php'];
@@ -16,14 +15,14 @@ foreach ($requiredFiles as $file) {
     }
 }
 if (!empty($missing)) {
-    die("Fehlende waveQl-Dateien: " . implode(', ', $missing));
+    die("Missing waveQl files: " . implode(', ', $missing));
 }
 foreach ($requiredFiles as $file) {
     require_once $waveQlDir . $file;
 }
 
 // ----------------------------------------------------------------------
-// Datalist-Vorschläge
+// Datalist suggestions
 // ----------------------------------------------------------------------
 $sortExamples       = ['>Population', '<CountryName', '>FoundedYear', '<AreaKm2', '>FoundedDateYEAR'];
 $populationExamples = ['>1000000', '50000000><200000000', '!0', '10000000><50000000', '>100000000'];
@@ -94,9 +93,8 @@ $tableManifest = [
 ];
 
 // ----------------------------------------------------------------------
-// Formularverarbeitung
+// Form processing
 // ----------------------------------------------------------------------
-// Mode nur auf 'write' setzen, wenn explizit so gesendet, sonst 'read'
 $mode         = ($_POST['mode'] ?? '') === 'write' ? 'write' : 'read';
 $action       = $_POST['action'] ?? '';
 $filter       = [];
@@ -108,6 +106,21 @@ $resultOutput = '';
 $result       = null;
 $sql          = null;
 $execError    = null;
+
+// ----------------------------------------------------------------------
+// Server-side access restrictions (no exception – just block action)
+// ----------------------------------------------------------------------
+if ($action !== '') {
+    if (($mode === 'read' && !$allowRead) || ($mode === 'write' && !$allowWrite)) {
+        $action = ''; // abort action, no extra error message (template will show warning)
+    }
+}
+// If current mode is not allowed, switch to first allowed one (for UI display)
+if ($mode === 'write' && !$allowWrite) {
+    $mode = $allowRead ? 'read' : '';
+} elseif ($mode === 'read' && !$allowRead) {
+    $mode = $allowWrite ? 'write' : '';
+}
 
 try {
     if ($mode === 'read') {
@@ -139,7 +152,7 @@ try {
 }
 
 // ----------------------------------------------------------------------
-// Ausführen
+// Execution
 // ----------------------------------------------------------------------
 if ($action !== '') {
     try {
@@ -172,7 +185,7 @@ if ($action !== '') {
 }
 
 // ----------------------------------------------------------------------
-// Ergebnisaufbereitung
+// Output preparation
 // ----------------------------------------------------------------------
 if ($sql) {
     $sqlOutput = htmlspecialchars($sql);
