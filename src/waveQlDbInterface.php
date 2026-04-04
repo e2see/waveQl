@@ -30,6 +30,7 @@ namespace e2;
  */
 interface waveQlDbInterface
 {
+
     ##### Führt eine Query direkt aus (nicht vorbereitet).
     public function query(string $sql): mixed;
 
