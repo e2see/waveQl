@@ -45,6 +45,7 @@ abstract class waveQlCore
 
     protected readonly bool $optionVirtualDateFields;
     protected readonly bool $optionAllowSqlCondition;
+    protected readonly array $sqlAllowedGroups;
 
     ########################### OPERATOR-KÜRZEL
 
@@ -126,6 +127,68 @@ abstract class waveQlCore
     protected const GROUP_OR     = '~or~';
     protected const GROUP_META   = '~meta~';
 
+    ########################### SQL-BLACKLIST-GRUPPEN (CamelCase)
+
+    protected const SQL_BLACKLIST_GROUPS = [
+        'basicDanger' => [
+            '/\bALTER\b/i', '/\bCALL\b/i', '/\bCREATE\b/i', '/\bDO\b/i',
+            '/\bDROP\b/i', '/\bFLUSH\b/i', '/\bHANDLER\b/i', '/\bINSTALL\b/i',
+            '/\bPURGE\b/i', '/\bRENAME\b/i', '/\bREPLACE\b/i', '/\bRESET\b/i',
+            '/\bTRUNCATE\b/i', '/\bUNINSTALL\b/i', '/\bWAIT_FOR\b/i',
+        ],
+        'systemTables' => [
+            '/\bINFORMATION_SCHEMA\b/i',
+            '/\bmysql\.(user|db|tables_priv|columns_priv)\b/i',
+            '/\bperformance_schema\b/i',
+            '/\bsys\b/i',
+        ],
+        'fileOperations' => [
+            '/\bLOAD\s+DATA\s+INFILE\b/i',
+            '/\bLOAD\s+XML\s+INFILE\b/i',
+            '/\bINTO\s+DUMPFILE\b/i',
+            '/\bINTO\s+OUTFILE\b/i',
+            '/\bLOAD_FILE\b/i',
+        ],
+        'xmlError' => [
+            '/\bEXTRACTVALUE\s*\(/i',
+            '/\bUPDATEXML\s*\(/i',
+            '/\bNAME_CONST\s*\(/i',
+        ],
+        'timingAttacks' => [
+            '/\bGET_LOCK\s*\(/i',
+            '/\bRELEASE_LOCK\s*\(/i',
+            '/\bIS_FREE_LOCK\s*\(/i',
+            '/\bIS_USED_LOCK\s*\(/i',
+            '/\bSLEEP\s*\(/i',
+            '/\bBENCHMARK\s*\(/i',
+        ],
+        'dynamicSql' => [
+            '/\bPREPARE\s+.*\s+FROM\b/i',
+            '/\bDEALLOCATE\s+PREPARE\b/i',
+            '/\bEXECUTE\b/i',
+        ],
+        'systemInfo' => [
+            '/\bVERSION\s*\(/i',
+            '/\bDATABASE\s*\(/i',
+            '/\bSCHEMA\s*\(/i',
+            '/\bUSER\s*\(/i',
+            '/\bCURRENT_USER\s*\(/i',
+            '/\bSESSION_USER\s*\(/i',
+            '/\bSYSTEM_USER\s*\(/i',
+            '/@@[a-zA-Z_]+/i',
+        ],
+        'dataManipulation' => [
+            '/\bINSERT\b/i',
+            '/\bUPDATE\b/i',
+            '/\bDELETE\b/i',
+        ],
+        'misc' => [
+            '/\bPROCEDURE\s+ANALYSE\s*\(/i',
+            '/\bUNION\b/i',
+            '/;/',
+        ],
+    ];
+
     ########################### KONSTRUKTOR & INITIALISIERUNG
 
     ##### Konstruktor – initialisiert die Manifeste und generiert automatische Felder.
@@ -134,6 +197,7 @@ abstract class waveQlCore
 
         $this->optionVirtualDateFields = $options['virtualDateFields'] ?? true;
         $this->optionAllowSqlCondition = $options['allowSqlCondition'] ?? false;
+        $this->sqlAllowedGroups        = $options['sqlAllowedGroups'] ?? [];
 
 
         $this->db            = $db;
@@ -665,22 +729,15 @@ abstract class waveQlCore
         $sql = preg_replace('/--.*$/m', '|', $sql);
         $sql = preg_replace('/#.*$/m', '|', $sql);
 
-        $blacklist = [
-            '/\bALTER\b/i', '/\bCALL\b/i', '/\bCREATE\b/i', '/\bDELETE\b/i', '/\bDO\b/i',
-            '/\bDROP\b/i', '/\BENCHMARK\s*\(/i', '/\bEXEC\b/i', '/\bEXECUTE\b/i', '/\bFLUSH\b/i',
-            '/\bHANDLER\b/i', '/\bINSERT\b/i', '/\bINSTALL\b/i', '/\bINTO\s+DUMPFILE\b/i',
-            '/\bINTO\s+OUTFILE\b/i', '/\bLOAD_FILE\b/i', '/\bPG_SLEEP\b/i', '/\bPURGE\b/i',
-            '/\bRENAME\b/i', '/\bREPLACE\b/i', '/\bRESET\b/i', '/\bSLEEP\s*\(/i',
-            '/\bTRUNCATE\b/i', '/\bUNINSTALL\b/i', '/\bUNION\b/i', '/\bUPDATE\b/i',
-            '/\bWAIT_FOR\b/i', '/;/',
-        ];
-        foreach ($blacklist as $pattern) {
-            if (preg_match($pattern, $sql)) {
-                throw new waveQlSecurityException('Unsafe SQL condition detected: ' . $sql);
+        foreach (self::SQL_BLACKLIST_GROUPS as $groupKey => $patterns) {
+            if (in_array($groupKey, $this->sqlAllowedGroups, true)) {
+                continue;
             }
-        }
-        if (strpos($sql, ';') !== false) {
-            throw new waveQlSecurityException('Unsafe SQL condition contains semicolon: ' . $sql);
+            foreach ($patterns as $pattern) {
+                if (preg_match($pattern, $sql)) {
+                    throw new waveQlSecurityException("Unsafe SQL condition detected (group: $groupKey): " . $sql);
+                }
+            }
         }
     }
 
