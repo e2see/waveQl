@@ -223,7 +223,7 @@ No other dependencies – just PHP ≥8.0 and a database connection (mysqli or a
 <br><br>
 ◤◤◤ Demo Environment
 
-The repository includes a **ready‑to‑run demo environment**. Just copy the waveQl files into the parent directory and point your browser to `test.php`. You can explore all operators, magic keys, and joins interactively.
+The repository includes a **ready‑to‑run demo environment**. Just copy the waveQl files into the parent directory and point your browser to `index.php`. You can explore all operators, magic keys, and joins interactively.
 
 A **database setup script** is included – simply click the *"reset/initialise database"* link to create the demo tables and sample data. The interface lets you apply filters, see the generated SQL, and execute queries in real time. It's the perfect sandbox to experiment with waveQl's features.
 

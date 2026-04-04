@@ -1,4 +1,3 @@
-<?php
 /*
  *  ██╗    ██╗ █████╗ ██╗   ██╗███████╗ ██████╗ ██╗
  *  ██║    ██║██╔══██╗██║   ██║██╔════╝██╔═══██╗██║
@@ -11,29 +10,4 @@
  *                    ~~~~~~~~~~~~
  *                      by e2see
  *
- *
  */
-
-
-$host   = 'localhost';
-$user   = 'root';
-$pass   = '';
-$dbname = 'waveql_test';
-
-$mysqli            = null;
-$dbConnectionError = '';
-
-try {
-    $mysqli = new mysqli($host, $user, $pass);
-    if ($mysqli->connect_error) {
-        throw new Exception($mysqli->connect_error);
-    }
-    if (!$mysqli->query("CREATE DATABASE IF NOT EXISTS $dbname")) {
-        throw new Exception($mysqli->error);
-    }
-    $mysqli->select_db($dbname);
-    $mysqli->set_charset('utf8');
-} catch (Exception $e) {
-    $dbConnectionError = $e->getMessage();
-    $mysqli = null;
-}

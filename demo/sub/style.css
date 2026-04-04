@@ -1,0 +1,238 @@
+/* Grundlegende Einstellungen */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f9f9f9;
+    margin: 0;
+    padding: 2rem;
+    color: #333;
+}
+
+
+#logo {
+    display: block;
+    margin: 0 auto 1rem auto;
+    width: 100px;
+    position: fixed;
+    bottom: 10px;
+    right: 20px;
+}
+
+
+h1 {
+    font-size: 1.8rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+/* Preset‑Buttons */
+.presets {
+    margin: 1.5rem 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+}
+.presets button {
+    background: #eef2f7;
+    border: 1px solid #cfdde6;
+    border-radius: 30px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.presets button:hover {
+    background: #dfe6ed;
+    border-color: #bdc4cc;
+    transform: translateY(-1px);
+}
+
+/* Nachrichten (Erfolg/Fehler) */
+.message {
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+    font-weight: 500;
+}
+.success {
+    background: #e0f2e9;
+    border-left: 5px solid #2ecc71;
+    color: #1e6f3f;
+}
+.error {
+    background: #fde8e8;
+    border-left: 5px solid #e74c3c;
+    color: #b33c2e;
+}
+
+/* Dashboard‑Zeilen (flex) */
+.dashboard-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+.dashboard-card {
+    flex: 1;
+    min-width: 0; /* verhindert Überlauf */
+    border: 1px solid #ddd;   /* dezentes Grün, etwas sichtbarer */
+    border-radius: 12px;
+    background: white;
+    box-shadow: 10px 15px 20px rgba(0,0,0,0.07);
+    padding: 1rem;
+    /* KEINE Höhenbegrenzung – wächst frei */
+}
+
+
+
+
+@media (max-width: 800px) {
+    .dashboard-row {
+        flex-direction: column;
+    }
+}
+
+/* Karten‑Header */
+.card-header {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    color: #2c3e50;
+    border-bottom: 1px solid #e0e4e8;
+    display: inline-block;
+    padding-bottom: 0.25rem;
+}
+
+/* Code‑Blöcke und SQL‑Inhalt */
+.code-block, .sql-content {
+    background: #f4f6f9;
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    overflow-x: auto;
+    max-height: 400px;
+    white-space: pre-wrap;
+    margin: 0;
+}
+
+/* Kompakte Fieldsets für untere Karten */
+.compact-fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+.compact-fieldset legend {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+.compact-fieldset label {
+    display: inline-block;
+    width: 100px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #4a627a;
+    margin-top: 0.5rem;
+}
+.compact-fieldset input, .compact-fieldset select {
+    width: calc(100% - 110px);
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #cfdfed;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+}
+.compact-fieldset input::placeholder {
+    color: #bcbcbc;
+    font-style: italic;
+    font-size: 0.75rem;
+}
+
+/* Steuerung (Radio‑Buttons + Buttons) */
+.control-group {
+    margin-bottom: 1rem;
+}
+.radio-label {
+    display: inline-block;
+    width: auto !important;
+    margin-right: 1rem;
+    font-weight: normal;
+}
+.radio-label input[type="radio"] {
+    width: auto;
+    margin-right: 0.3rem;
+    transform: scale(1); /* sicherstellen, dass sie sichtbar sind */
+}
+button {
+    background: #f0f4fa;
+    border: 1px solid #cbdbe0;
+    border-radius: 30px;
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-right: 0.5rem;
+}
+button:hover {
+    background: #e6ecf4;
+}
+
+/* Ergebnis‑Box – nur diese scrollt */
+.result-box {
+overflow: auto;
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
+
+}
+.output-fieldset {
+    border: 1px solid #e0e4e8;
+    border-radius: 16px;
+    padding: 1.2rem 1.5rem;
+    background: white;
+    box-shadow: 10px 15px 20px rgba(0,0,0,0.07);
+    max-height: 400px;        /* Höhenbegrenzung */
+    overflow: auto;           /* Scrollbalken bei Bedarf */
+}
+.output-fieldset legend {
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 0 0.5rem;
+    color: #2c3e50;
+}
+.result-content {
+    overflow-x: auto;
+}
+.result-content table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+.result-content th, .result-content td {
+    border: 1px solid #e2e8f0;
+    padding: 0.6rem 0.8rem;
+    text-align: left;
+    vertical-align: top;
+}
+.result-content th {
+    background: #f1f5f9;
+    font-weight: 600;
+    color: #1e4668;
+}
+.result-content tr:nth-child(even) {
+    background: #fafcff;
+}
+.result-content tr:hover {
+    background: #f8fafd;
+}
+.output-fieldset.error {
+    border-left-color: #e74c3c;
+}
+.output-fieldset.error legend {
+    color: #c0392b;
+}
+.error-content {
+    color: #b33c2e;
+}
