@@ -1,11 +1,11 @@
-# waveQl
-a smart query builder<br>
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Demo](images/logo-s.png)
 
 
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) a smart query builder
 
 
-◤◤◤ waveQl – The SQL Builder That Speaks Your Language
+# waveQl – The SQL Builder That Speaks Your Language
+
 
 
 
