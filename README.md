@@ -96,6 +96,10 @@ $keyManifest = [
     ],
 ];
 
+$db      = new mysqli('localhost', 'root', '', 'mydb');
+$wave    = \e2\waveQl::create($db, $tableManifest, $keyManifest);
+$builder = $wave->read(); // read-modus (also possible: write for INSERTS)
+
 ```
 
 That was the one-time setup – now the real filter fun begins!
@@ -111,10 +115,6 @@ $filters = [
     ]
 ];
 
-
-$db      = new mysqli('localhost', 'root', '', 'mydb');
-$wave    = \e2\waveQl::create($db, $tableManifest, $keyManifest);
-$builder = $wave->read(); // read-modus (also possible: write for INSERTS)
 
 // get the final SQL
 echo $builder->setValues($filters)->getQuery();
@@ -135,6 +135,7 @@ SELECT
     `c`.`area_km2`           AS AreaKm2,
     `c`.`capital`            AS Capital,
     `c`.`founded_year`       AS FoundedYear,
+    `c`.`founded_date`       AS FoundedDate,
     DATE(c.founded_date)     AS FoundedDateDATE,
     YEAR(c.founded_date)     AS FoundedDateYEAR,
     QUARTER(c.founded_date)  AS FoundedDateQUARTER,
@@ -144,7 +145,6 @@ SELECT
     HOUR(c.founded_date)     AS FoundedDateHOUR,
     MINUTE(c.founded_date)   AS FoundedDateMINUTE,
     UNIX_TIMESTAMP(c.founded_date) AS FoundedDateUTS,
-    `c`.`founded_date`       AS FoundedDate,
     `cnt`.`name`             AS ContinentName
 FROM
     `countries` `c`
@@ -152,7 +152,7 @@ FROM
             `continents` `cnt`
             ON (`cnt`.`id` = `c`.`continent_id`)
 WHERE 1
-    AND `c`.`founded_year`   < 1950
+    AND `c`.`founded_year`   <= 1950
     AND `c`.`founded_year`   > 1900
     AND `cnt`.`name`         = 'Asia'
     AND (
@@ -216,7 +216,7 @@ If you prefer Composer, you can add the repository to your `composer.json` (the 
 - PHP ≥8.0
 - A database connection: either a `mysqli` object **or** an object implementing the `waveQlDbInterface` (e.g. a custom PDO wrapper).
 
-No other dependencies – just PHP ≥8.0 and a database connection (mysqli or a custom adapter).
+No other dependencies – just PHP ≥8.1 and a database connection (mysqli or a custom adapter).
 
 
 

@@ -1,4 +1,6 @@
-/* Basic settings */
+/* ============================================================
+   Basis-Styling (unverändert)
+   ============================================================ */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #f9f9f9;
@@ -7,7 +9,6 @@ body {
     color: #333;
 }
 
-/* Logo Container für 3D-Perspektive und fixed-Position */
 .logo-container {
     position: fixed;
     bottom: 15px;
@@ -33,19 +34,11 @@ body {
     animation: none;
 }
 
-/* Volle 360° Drehung mit Überschwinger (wie zu viel Schwung) */
 @keyframes flipOver {
     0%   { transform: rotateX(0deg); }
-    80%  { transform: rotateX(0deg); }      /* Pause 4 Sekunden */
-    95%  { transform: rotateX(400deg); }    /* Überschwinger auf 400° */
-    100% { transform: rotateX(360deg); }    /* Zurück auf 360° (entspricht 0°) */
-}
-
-
-
-
-code {
-    background: #fff;
+    80%  { transform: rotateX(0deg); }
+    95%  { transform: rotateX(400deg); }
+    100% { transform: rotateX(360deg); }
 }
 
 h1 {
@@ -55,7 +48,6 @@ h1 {
     color: #2c3e50;
 }
 
-/* Preset buttons */
 .presets {
     margin: 1.5rem 0;
     display: flex;
@@ -82,7 +74,6 @@ h1 {
     box-shadow: 3px 3px 5px rgba(0,0,0,.1);
 }
 
-/* Messages (success/error) */
 .message {
     padding: 0.8rem 1rem;
     border-radius: 8px;
@@ -109,7 +100,6 @@ h1 {
     color: #a25e00;
 }
 
-/* Dashboard rows (flex) */
 .dashboard-row {
     display: flex;
     flex-wrap: wrap;
@@ -120,20 +110,23 @@ h1 {
 .dashboard-card {
     flex: 1;
     min-width: 0;
-    border: 1px solid #ddd;
-    border-radius: 12px;
+    border: 1px solid #e0e4e8;
+    border-radius: 16px;
     background: white;
     box-shadow: 5px 5px 10px rgba(0,0,0,.06);
-    padding: 1rem;
+    padding: 1.2rem 1.5rem;
+    overflow: auto;
 }
 
-@media (max-width: 800px) {
-    .dashboard-row {
-        flex-direction: column;
-    }
+.result-card {
+    margin-bottom: 2rem;
 }
 
-/* Card header */
+.result-content {
+    max-height: 500px;
+    overflow: auto;
+}
+
 .card-header {
     font-weight: 600;
     font-size: 1rem;
@@ -144,7 +137,6 @@ h1 {
     padding-bottom: 0.25rem;
 }
 
-/* Code blocks and SQL content */
 .code-block, .sql-content {
     background: #f4f6f9;
     padding: 0.8rem;
@@ -157,7 +149,6 @@ h1 {
     margin: 0;
 }
 
-/* Compact fieldsets for lower cards */
 .compact-fieldset {
     border: none;
     padding: 0;
@@ -167,50 +158,108 @@ h1 {
 .compact-fieldset legend {
     font-weight: 600;
     font-size: 0.9rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     color: #2c3e50;
 }
 
-.compact-fieldset label {
-    display: inline-block;
-    width: 100px;
+.form-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.form-row > label,
+.filter-label,
+.date-label,
+.meta-label {
+    width: 120px;
+    flex-shrink: 0;
     font-size: 0.85rem;
     font-weight: 500;
     color: #4a627a;
-    margin-top: 0.5rem;
 }
 
-.compact-fieldset input, .compact-fieldset select {
-    width: calc(100% - 110px);
-    margin-bottom: 0.5rem;
+.form-row input:not([type="checkbox"]):not([type="radio"]),
+.form-row select,
+.filter-input,
+.date-input,
+.meta-input {
+    flex: 1;
+    min-width: 150px;
+    padding: 0.45rem 0.6rem;
     border-radius: 6px;
     border: 1px solid #cfdfed;
-    padding: 0.4rem 0.6rem;
     font-size: 0.85rem;
+    background: white;
 }
 
-.compact-fieldset input::placeholder {
-    color: #bcbcbc;
-    font-style: italic;
-    font-size: 0.75rem;
+.date-select-right {
+    width: 130px;
+    flex-shrink: 0;
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #cfdfed;
+    font-size: 0.85rem;
+    background: white;
 }
 
-/* Control group (radio buttons + buttons) */
-.control-group {
-    margin-bottom: 1rem;
+.filter-checkbox {
+    width: auto;
+    flex-shrink: 0;
+    margin-left: auto;
+    transform: scale(1.1);
+    cursor: pointer;
+}
+
+.date-fulltext-checkbox {
+    width: auto;
+    flex-shrink: 0;
+    transform: scale(1.1);
+    cursor: pointer;
+    margin-left: 0.25rem;
+}
+
+.radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
 }
 
 .radio-label {
-    display: inline-block;
-    width: auto !important;
-    margin-right: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
     font-weight: normal;
+    font-size: 0.85rem;
+    cursor: pointer;
 }
 
 .radio-label input[type="radio"] {
     width: auto;
-    margin-right: 0.3rem;
-    transform: scale(1);
+    margin: 0;
+}
+
+.checkbox-group-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: normal;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
 }
 
 button {
@@ -231,79 +280,109 @@ button:hover {
     box-shadow: 3px 3px 5px rgba(0,0,0,.1);
 }
 
-/* Result box – only this scrolls */
-.result-box {
-    overflow: auto;
-    margin-bottom: 1.5rem;
-    border-radius: 12px;
-}
-
-.output-fieldset {
-    border: 1px solid #e0e4e8;
-    border-radius: 16px;
-    padding: 1.2rem 1.5rem;
-    background: white;
-    box-shadow: 5px 5px 10px rgba(0,0,0,.06);
-    max-height: 400px;
-    overflow: auto;
-}
-
-.output-fieldset legend {
-    font-weight: 600;
-    font-size: 1rem;
-    padding: 0 0.5rem;
-    color: #2c3e50;
-}
-
-.result-content {
-    overflow-x: auto;
-}
-
-.result-content table {
+.result-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.85rem;
 }
 
-.result-content th, .result-content td {
+.result-table th, .result-table td {
     border: 1px solid #e2e8f0;
     padding: 0.6rem 0.8rem;
     text-align: left;
     vertical-align: top;
 }
 
-.result-content th {
+.result-table th {
     background: #f1f5f9;
     font-weight: 600;
     color: #1e4668;
 }
 
-.result-content tr:nth-child(even) {
+.result-table tr:nth-child(even) {
     background: #fafcff;
 }
 
-.result-content tr:hover {
+.result-table tr:hover {
     background: #f8fafd;
 }
 
-.output-fieldset.error {
-    border-left-color: #e74c3c;
+.blink-box {
+    animation: blinkBorder 0.5s ease-in-out 3;
+    box-shadow: 0 0 0 2px #3498db;
+    border-radius: 12px;
 }
 
-.output-fieldset.error legend {
-    color: #c0392b;
+@keyframes blinkBorder {
+    0% { box-shadow: 0 0 0 0 #3498db; }
+    50% { box-shadow: 0 0 0 4px #3498db; }
+    100% { box-shadow: 0 0 0 0 #3498db; }
 }
 
-.error-content {
-    color: #b33c2e;
-}
-
-/* ----------------------------------------
-   Class for disabled elements (greyed out)
-   ---------------------------------------- */
 .disabled-element {
     opacity: 0.3;
     filter: grayscale(100%);
     pointer-events: none;
     cursor: not-allowed;
+}
+
+.fulltext-row {
+    margin-top: 0.75rem;
+}
+
+.fulltext-label {
+    width: 120px;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #4a627a;
+}
+
+.fulltext-input {
+    flex: 1;
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #cfdfed;
+    font-size: 0.85rem;
+}
+
+input::placeholder, select::placeholder {
+    color: #bcbcbc;
+    font-style: italic;
+    font-size: 0.75rem;
+}
+
+/* Responsive Anpassungen */
+@media (max-width: 1000px) {
+    .dashboard-row {
+        flex-direction: column;
+    }
+    .form-row {
+        flex-wrap: wrap;
+    }
+    .form-row > label,
+    .filter-label,
+    .date-label,
+    .meta-label {
+        width: 100%;
+        margin-bottom: 0.25rem;
+    }
+    .form-row input:not([type="checkbox"]):not([type="radio"]),
+    .form-row select,
+    .filter-input,
+    .date-input,
+    .meta-input,
+    .date-select-right {
+        width: 100%;
+        min-width: auto;
+    }
+    .filter-checkbox,
+    .date-fulltext-checkbox {
+        margin-left: 0;
+        margin-top: 0.25rem;
+    }
+    .radio-group {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }

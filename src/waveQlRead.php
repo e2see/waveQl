@@ -6,17 +6,16 @@ namespace e2;
 
 /**
  * =================================================================================================
- * waveQlRead – Logik für SELECT‑Abfragen (Read)
+ * waveQlRead – Logic for SELECT queries (Read)
  * =================================================================================================
  *
- * Diese Klasse erweitert waveQlCore und implementiert alle Funktionen zum Erzeugen und Ausführen
- * von SELECT‑Queries. Sie verarbeitet die über setValues() übergebenen Suchkriterien inklusive
- * der eingebetteten Operatoren (>, <, ~, !NULL, BLANK, EMPTY, Bereichsoperatoren) und setzt sie
- * in WHERE‑Bedingungen um. Paginierung, Sortierung und Volltextsuche werden über setMeta()
- * gesteuert.
+ * This class extends waveQlCore and implements all functions for generating and executing
+ * SELECT queries. It processes the search criteria passed via setValues() including
+ * embedded operators (>, <, ~, !NULL, BLANK, EMPTY, range operators) and converts them
+ * into WHERE conditions. Pagination, sorting and full‑text search are controlled via setMeta().
  *
  * -------------------------------------------------------------------------------------------------
- * Verwendung:
+ * Usage:
  *   $read = $wave->read();
  *   $read->setMeta(['sort' => '>name', 'pageSize' => 10])
  *        ->setValues(['age' => '>18', 'name' => '~Müller~'])
@@ -34,7 +33,7 @@ class waveQlRead extends waveQlCore
 
     protected readonly bool $optionPrepared;
 
-    ########################### KONSTRUKTOR
+    ########################### CONSTRUCTOR
 
     public function __construct(waveQlDbInterface $db, array $tableManifest, array $keyManifest, array $options = [])
     {
@@ -42,41 +41,41 @@ class waveQlRead extends waveQlCore
         $this->optionPrepared = $options['prepared'] ?? false;
     }
 
-    ########################### API-METHODEN
+    ########################### API METHODS
 
-    ##### Setzt Meta‑Informationen (Sortierung, Paginierung, Suche, benutzerdefinierte SQL)
+    ##### Sets meta information (sorting, pagination, search, custom SQL).
     public function setMeta(array $meta): self
     {
         $this->updateLive(null, $meta, false, true);
         return $this;
     }
 
-    ##### Setzt die Suchwerte (mit optionalen Operatoren)
+    ##### Sets the search values (with optional operators).
     public function setValues(array $values): self
     {
         $this->updateLive($values, null, true, false);
         return $this;
     }
 
-    ##### Führt die Query aus und liefert das Ergebnis als Array
+    ##### Executes the query and returns the result as an array.
     public function execute(): array|int
     {
 
         if ($this->optionPrepared) {
             $prep = $this->getPreparedQuery();
             if (!$prep) {
-                throw new waveQlQueryException('Keine gültige Query.');
+                throw new waveQlQueryException('No valid query.');
             }
             $stmt = $this->db->prepare($prep['query']);
             if (!$stmt) {
-                throw new waveQlQueryException('Prepare fehlgeschlagen: ' . $this->db->error());
+                throw new waveQlQueryException('Prepare failed: ' . $this->db->error());
             }
             if (!empty($prep['params'])) {
                 $this->db->execute($stmt, $prep['params'], $prep['types']);
             } else {
                 $stmt->execute();
             }
-            //-- Ergebnis abholen
+            //-- Fetch result
             if ($this->db->isResultSet($stmt)) {
                 $data = $this->db->fetchAll($stmt);
                 return $data;
@@ -85,26 +84,26 @@ class waveQlRead extends waveQlCore
         } else {
             $query = $this->getQuery();
             if (!$query) {
-                throw new waveQlQueryException('Keine gültige Query.');
+                throw new waveQlQueryException('No valid query.');
             }
             $result = $this->db->query($query);
             if (!$result) {
-                throw new waveQlQueryException('Query fehlgeschlagen: ' . $this->db->error());
+                throw new waveQlQueryException('Query failed: ' . $this->db->error());
             }
             return $this->db->fetchAll($result);
         }
     }
 
-    ##### Liefert die Anzahl der Treffer (ohne LIMIT)
+    ##### Returns the number of hits (without LIMIT).
     public function count(bool $total = false): int
     {
         $query = $this->getCountQuery($total);
         if (!$query) {
-            throw new waveQlQueryException('Keine gültige Query.');
+            throw new waveQlQueryException('No valid query.');
         }
         $result = $this->db->query($query);
         if (!$result) {
-            throw new waveQlQueryException('Query fehlgeschlagen: ' . $this->db->error());
+            throw new waveQlQueryException('Query failed: ' . $this->db->error());
         }
         $rows = $this->db->fetchAll($result);
         if (empty($rows)) {
@@ -113,33 +112,36 @@ class waveQlRead extends waveQlCore
         return (int)($rows[0]['count'] ?? 0);
     }
 
-    ##### Prüft, ob mindestens ein Treffer existiert
+    ##### Checks whether at least one hit exists.
     public function exists(): bool
     {
         return $this->count() > 0;
     }
 
-    ##### Liefert die vollständige SQL‑Query (für Debug)
+    ##### Returns the complete SQL query (for debugging).
     public function getQuery(): string|false
     {
         $limitless = $this->getLimitlessQuery();
         return $limitless ? $limitless . $this->getOrderQuery() . $this->getLimitQuery() : false;
     }
 
-    ########################### OPERATOR-PARSING
+    ########################### OPERATOR PARSING
 
-    ##### Parst den Wert eines Feldes und ermittelt die verwendeten Operatoren
+    ##### Parses the value of a field and determines the operators used.
     protected function parseOperators(array $def): array
     {
         $result = [];
-        $value = $def['value'];
+        $value = $def['value'] ?? '';
+        if ($value === null) {
+            $value = '';
+        }
         $type = $def['type'];
 
         if ($value === '' || $value === self::VAL_UNSET) {
             return $result;
         }
 
-        //-- Spezialfälle NULL / NOT NULL
+        //-- Special cases NULL / NOT NULL
         if ($value === self::VAL_NULL) {
             $result[self::OP_IS_NULL] = true;
             return $result;
@@ -149,7 +151,7 @@ class waveQlRead extends waveQlCore
             return $result;
         }
 
-        //-- Magic-Keys (BLANK, !BLANK, EMPTY, !EMPTY)
+        //-- Magic keys (BLANK, !BLANK, EMPTY, !EMPTY)
         if ($value === self::VAL_BLANK) {
             $result[self::OP_IS_BLANK] = true;
             return $result;
@@ -167,7 +169,7 @@ class waveQlRead extends waveQlCore
             return $result;
         }
 
-        //-- Je nach Typ unterschiedliche Parsing‑Logik
+        //-- Different parsing logic depending on type
         if (in_array($type, self::NUMERIC_TYPES)) {
             return $this->parseNumericOperators($value);
         } elseif (in_array($type, self::DATETIME_TYPES)) {
@@ -177,7 +179,7 @@ class waveQlRead extends waveQlCore
         }
     }
 
-    ##### Parst Operatoren für numerische Typen
+    ##### Parses operators for numeric types.
     protected function parseNumericOperators(string $value): array
     {
         $result = [];
@@ -223,7 +225,7 @@ class waveQlRead extends waveQlCore
         return $result;
     }
 
-    ##### Parst Operatoren für Datums‑/Zeit‑Typen
+    ##### Parses operators for date/time types.
     protected function parseDateTimeOperators(string $value): array
     {
         $result = [];
@@ -269,10 +271,10 @@ class waveQlRead extends waveQlCore
         return $result;
     }
 
-    ##### Parst Bereichsoperatoren wie ><, >=<, etc.
+    ##### Parses range operators like ><, >=<, etc.
     protected function parseRange(string $value, bool $asNumber, array &$result): void
     {
-        //-- =><= (inklusiv-inklusiv)
+        //-- =><= (inclusive-inclusive)
         if (strpos($value, '=><=') !== false) {
             $parts = explode('=><=', $value);
             if (count($parts) === 2) {
@@ -291,7 +293,7 @@ class waveQlRead extends waveQlCore
             return;
         }
 
-        //-- =>< (inklusiv-exklusiv)
+        //-- =>< (inclusive-exclusive)
         if (strpos($value, '=><') !== false) {
             $parts = explode('=><', $value);
             if (count($parts) === 2) {
@@ -310,7 +312,7 @@ class waveQlRead extends waveQlCore
             return;
         }
 
-        //-- ><= (exklusiv-inklusiv)
+        //-- ><= (exclusive-inclusive)
         if (strpos($value, '><=') !== false) {
             $parts = explode('><=', $value);
             if (count($parts) === 2) {
@@ -329,7 +331,7 @@ class waveQlRead extends waveQlCore
             return;
         }
 
-        //-- >< (exklusiv-exklusiv)
+        //-- >< (exclusive-exclusive)
         if (strpos($value, '><') !== false) {
             $parts = explode('><', $value);
             if (count($parts) === 2) {
@@ -349,7 +351,7 @@ class waveQlRead extends waveQlCore
         }
     }
 
-    ##### Parst Operatoren für String‑Typen (LIKE, !, Literal‑Escaping)
+    ##### Parses operators for string types (LIKE, !=, literal escaping).
     protected function parseStringOperators(string $value): array
     {
         $result = [];
@@ -360,7 +362,7 @@ class waveQlRead extends waveQlCore
 
         $fl = mb_substr($value, 0, 1);
 
-        //-- Backslash escaped den nachfolgenden Magic-Key
+        //-- Backslash escapes the following magic key
         if ($fl === '\\') {
             $rest = trim(mb_substr($value, 1));
             if ($rest !== '') {
@@ -369,7 +371,7 @@ class waveQlRead extends waveQlCore
             return $result;
         }
 
-        //-- Ungleich
+        //-- Not equal
         if ($fl === '!') {
             $rest = trim(mb_substr($value, 1));
             if ($rest !== '') {
@@ -378,61 +380,62 @@ class waveQlRead extends waveQlCore
             return $result;
         }
 
-        //-- LIKE-Operator: mindestens eine Tilde
+        //-- LIKE operator: at least one tilde
         if (substr_count($value, '~') >= 1) {
-            $parts = explode('~', $value);
+
+            $parts  = explode('~', $value);
             $string = implode('~', $parts);
+
             if (strpos($string, '~~') === false) {
                 $result[self::OP_LIKE] = $string;
             }
             return $result;
         }
 
-        //-- Einfacher Gleichheitswert
+        //-- Simple equality value
         if ($value !== '') {
             $result[self::OP_EQUAL] = $value;
         }
         return $result;
     }
 
-    ########################### WHERE-BEDINGUNGEN BAUEN
+    ########################### BUILDING WHERE CONDITIONS
 
-    ##### Zentrale Methode zum Bauen von WHERE‑Bedingungen (für String und Prepared)
+    ##### Central method for building WHERE conditions (for string and prepared).
     protected function buildWhereConditions(array $def, int $pad, string $mode): array
     {
         $lines = [];
-        $tab = 4;
+        $tab   = 4;
 
-        //--- Behandlung von OR‑Gruppen ---
+        //--- Handling of OR groups ---
         if (isset($def['type']) && $def['type'] === self::GROUP_OR . 'item') {
             $groupLines = [];
             foreach ($def['conditions'] as $logicalName => $value) {
                 $main = $this->keyManifestLive;
                 if (!isset($main[$logicalName]) || !isset($main[$logicalName]['rowName'])) continue;
+
                 $fieldDef          = $main[$logicalName];
                 $fieldDef['value'] = $value;
-                //-- Hole die bereits geparsten Operatoren
-                $parsed = $this->keyManifestLiveOp[$logicalName] ?? [];
-                $fieldDef = array_merge($fieldDef, $parsed);
+                $parsed            = $this->parseOperators($fieldDef);
+                $fieldDef          = array_merge($fieldDef, $parsed);
                 $fieldLines        = $this->buildWhereConditions($fieldDef, $pad - 5, $mode);
+
                 if (!empty($fieldLines)) {
                     $groupLines[] = '(' . implode(' AND ', $fieldLines) . ')';
                 }
             }
             if (!empty($groupLines)) {
-                $lines[] = '(' .
-                    PHP_EOL . str_repeat(' ', $tab * 3) .
+                $lines[] = '(' . PHP_EOL . str_repeat(' ', $tab * 3) .
                     implode(PHP_EOL . str_repeat(' ', ($tab * 3) - 3) . 'OR ', $groupLines) .
-                    PHP_EOL .
-                    '    )';
+                    PHP_EOL . '    )';
             }
             return $lines;
         }
-        //--- Ende Gruppenbehandlung ---
+        //--- End group handling ---
 
         if (!isset($def['rowName']) || $def['rowName'] === null) return $lines;
 
-        //-- UNSET? (wird bereits vor dem Parsen gefiltert, aber sicherheitshalber)
+        //-- UNSET? (already filtered before parsing, but for safety)
         if (isset($def['value']) && $def['value'] === self::VAL_UNSET) return $lines;
 
         //-- IS NULL / IS NOT NULL
@@ -481,7 +484,7 @@ class waveQlRead extends waveQlCore
             return $lines;
         }
 
-        //-- Literal (ehemals RAW)
+        //-- Literal (formerly RAW)
         if (isset($def[self::OP_LITERAL])) {
             if ($mode === 'prepared') {
                 $lines[] = str_pad($this->quoteMe($def['rowName']), $pad, ' ') . ' = ?';
@@ -517,8 +520,10 @@ class waveQlRead extends waveQlCore
         }
 
         if (isset($def[self::OP_LIKE])) {
-            $parts = explode('~', $def[self::OP_LIKE]);
+
+            $parts        = explode('~', $def[self::OP_LIKE]);
             $escapedParts = [];
+
             foreach ($parts as $part) {
                 $escapedParts[] = $this->getEscapedLikeString($part);
             }
@@ -534,9 +539,9 @@ class waveQlRead extends waveQlCore
         return $lines;
     }
 
-    ########################### QUERY-BAUSTEINE
+    ########################### QUERY BUILDING BLOCKS
 
-    ##### Ermittelt die SELECT‑Klausel
+    ##### Returns the SELECT clause.
     public function getSelectQuery(): string
     {
         $pad = 24;
@@ -550,7 +555,7 @@ class waveQlRead extends waveQlCore
         return PHP_EOL . 'SELECT' . PHP_EOL . '    ' . implode(',' . PHP_EOL . '    ', $parts);
     }
 
-    ##### Ermittelt die WHERE‑Klausel (inkl. Suche und sqlCondition)
+    ##### Returns the WHERE clause (including search and sqlCondition).
     public function getWhereQuery(): string
     {
         $pad = 20;
@@ -563,11 +568,13 @@ class waveQlRead extends waveQlCore
 
         $meta = $this->metaManifestLive;
 
-        //-- Volltextsuche über mehrere Felder
+        //-- Full‑text search over multiple fields
         if (!empty($meta['searchString']) && is_string($meta['searchString']) && trim($meta['searchString'], '~') !== '') {
+
             $targets     = is_string($meta['searchTarget']) ? explode(',', $meta['searchTarget']) : [];
             $searchParts = [];
             $main        = $this->keyManifestLive;
+
             foreach ($targets as $target) {
                 $target = trim($target);
                 if (isset($main[$target]) && isset($main[$target]['rowName'])) {
@@ -581,14 +588,14 @@ class waveQlRead extends waveQlCore
             }
         }
 
-        //-- Benutzerdefinierter SQL‑Teil
+        //-- Custom SQL part
         if (!empty($meta['sqlCondition']) && is_string($meta['sqlCondition'])) {
             $conditions[] = '(' . PHP_EOL . '         ' . $meta['sqlCondition'] . PHP_EOL . '        )';
         }
         return implode(PHP_EOL . '    AND ', $conditions);
     }
 
-    ##### WHERE‑Teil für Prepared Statements (mit Platzhaltern)
+    ##### WHERE part for prepared statements (with placeholders).
     protected function getWherePrepared(): string
     {
         $pad = 20;
@@ -602,9 +609,11 @@ class waveQlRead extends waveQlCore
         $meta = $this->metaManifestLive;
 
         if (!empty($meta['searchString']) && is_string($meta['searchString']) && trim($meta['searchString'], '~') !== '') {
+
             $targets     = is_string($meta['searchTarget']) ? explode(',', $meta['searchTarget']) : [];
             $searchParts = [];
             $main        = $this->keyManifestLive;
+
             foreach ($targets as $target) {
                 $target = trim($target);
                 if (isset($main[$target]) && isset($main[$target]['rowName'])) {
@@ -624,7 +633,7 @@ class waveQlRead extends waveQlCore
         return implode(PHP_EOL . '    AND ', $conditions);
     }
 
-    ##### Ermittelt die ORDER BY‑Klausel
+    ##### Returns the ORDER BY clause.
     public function getOrderQuery(): string
     {
         if (empty($this->metaManifestLive['sort']) || !is_string($this->metaManifestLive['sort'])) return '';
@@ -648,7 +657,7 @@ class waveQlRead extends waveQlCore
         return empty($parts) ? '' : PHP_EOL . 'ORDER BY' . PHP_EOL . '    ' . implode(',' . PHP_EOL . '    ', $parts);
     }
 
-    ##### Ermittelt die LIMIT‑Klausel (für Paginierung)
+    ##### Returns the LIMIT clause (for pagination).
     public function getLimitQuery(): string|false
     {
         if (!isset($this->metaManifestLive['firstElemNumber']) || $this->metaManifestLive['firstElemNumber'] === false) {
@@ -657,7 +666,7 @@ class waveQlRead extends waveQlCore
         return PHP_EOL . 'LIMIT ' . PHP_EOL . '    ' . $this->metaManifestLive['firstElemNumber'] . ', ' . $this->metaManifestLive['pageSize'] . ' ';
     }
 
-    ##### Baut den FROM‑Teil (Tabelle + Alias)
+    ##### Builds the FROM part (table + alias).
     public function getBodyQuery(): string|false
     {
         $table = $this->getTableQuery();
@@ -665,7 +674,7 @@ class waveQlRead extends waveQlCore
         return $this->getSelectQuery() . PHP_EOL . 'FROM ' . PHP_EOL . '    ' . $table;
     }
 
-    ##### Komplette Query ohne LIMIT
+    ##### Complete query without LIMIT.
     public function getLimitlessQuery(): string|false
     {
         $body = $this->getBodyQuery();
@@ -673,7 +682,7 @@ class waveQlRead extends waveQlCore
         return $body . PHP_EOL . $this->getJoinQuery() . $this->getWhereQuery();
     }
 
-    ##### Baut eine COUNT‑Abfrage
+    ##### Builds a COUNT query.
     public function getCountQuery(bool $total = false): string|false
     {
         $table = $this->getTableQuery();
@@ -684,7 +693,7 @@ class waveQlRead extends waveQlCore
 
     ########################### PREPARED STATEMENTS
 
-    ##### Bereitet die Query für Prepared Statements vor
+    ##### Prepares the query for prepared statements.
     public function getPreparedQuery(): array|false
     {
         $this->preparedParams = [];
@@ -705,7 +714,7 @@ class waveQlRead extends waveQlCore
         ];
     }
 
-    ########################### AKTUALISIERUNG DER OPERATOREN (EPIC 4)
+    ########################### OPERATOR REFRESH (EPIC 4)
 
     protected function refreshOperators(): void
     {

@@ -1,9 +1,7 @@
-document.addEventListener('DOMContentLoaded', async function() {
-    // ----- Logo hover: disappears (opacity 0.2, click-through) for 3 seconds -----
+document.addEventListener('DOMContentLoaded', async function () {
     const logo = document.getElementById('logo');
     if (logo) {
         let hideTimeout = null;
-
         function startHideTimer() {
             if (hideTimeout) clearTimeout(hideTimeout);
             hideTimeout = setTimeout(() => {
@@ -11,16 +9,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 hideTimeout = null;
             }, 2000);
         }
-
         logo.addEventListener('mouseenter', () => {
             logo.classList.add('logo-hidden');
             startHideTimer();
         });
-
-        // Do nothing on mouseleave – timer will remove class after 2 seconds from last enter
     }
 
-    // ----- Load presets from JSON -----
     let presets = [];
     try {
         const response = await fetch('sub/presets.json');
@@ -51,8 +45,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         const allInputs = document.querySelectorAll('#mainForm input, #mainForm select');
         allInputs.forEach(input => {
             if (input.type !== 'submit' && input.type !== 'button' && input.name) {
-                if (input.tagName === 'SELECT') {
-                    // nothing
+                if (input.type === 'checkbox') {
+                    input.checked = false;
                 } else {
                     input.value = '';
                 }
@@ -60,55 +54,127 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
 
         for (const [key, val] of Object.entries(values)) {
-            let input = document.querySelector(`input[name="${key}"]`);
-            if (input) {
-                input.value = val;
-                continue;
-            }
-            const group = Array.from(document.querySelectorAll('[data-datefield]')).find(g => {
-                const select = g.querySelector('.date-select');
-                return select && Array.from(select.options).some(opt => opt.value === key);
-            });
-            if (group) {
-                const select = group.querySelector('.date-select');
-                const inputField = group.querySelector('.date-input');
-                if (select && inputField) {
-                    select.value = key;
-                    inputField.name = key;
-                    inputField.value = val;
-                    select.dispatchEvent(new Event('change'));
+            if (key === 'searchTarget') {
+                const fields = val.split(',').map(f => f.trim());
+                const checkboxes = document.querySelectorAll('input[name="fulltext_fields[]"]');
+                checkboxes.forEach(cb => {
+                    if (fields.includes(cb.value)) {
+                        cb.checked = true;
+                    }
+                });
+            } else if (key === 'searchString') {
+                const ftInput = document.querySelector('input[name="fulltext_search_string"]');
+                if (ftInput) ftInput.value = val;
+            } else {
+                let matchedBase = null;
+                let matchedSuffix = null;
+                for (const base of dateFieldNames) {
+                    if (key === base) {
+                        matchedBase = base;
+                        matchedSuffix = 'Original';
+                        break;
+                    }
+                    if (key.startsWith(base)) {
+                        const suffix = key.substring(base.length);
+                        if (virtualSuffixes.includes(suffix)) {
+                            matchedBase = base;
+                            matchedSuffix = suffix;
+                            break;
+                        }
+                    }
+                }
+                if (matchedBase) {
+                    const group = document.querySelector(`.date-field-group[data-datefield="${matchedBase}"]`);
+                    if (group) {
+                        const textInput = group.querySelector('.date-input');
+                        const select = group.querySelector('.date-select-right');
+                        if (textInput) textInput.value = val;
+                        if (select) {
+                            for (let i = 0; i < select.options.length; i++) {
+                                if (select.options[i].value === matchedSuffix) {
+                                    select.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                            select.dispatchEvent(new Event('change'));
+                        }
+                    }
+                } else {
+                    let input = document.querySelector(`input[name="${key}"]`);
+                    if (input) {
+                        input.value = val;
+                    }
                 }
             }
         }
 
-        const form = document.getElementById('mainForm');
-        let actionInput = form.querySelector('input[name="action"]');
+        let actionInput = document.querySelector('input[name="action"]');
         if (!actionInput) {
             actionInput = document.createElement('input');
             actionInput.type = 'hidden';
             actionInput.name = 'action';
-            form.appendChild(actionInput);
+            document.getElementById('mainForm').appendChild(actionInput);
         }
         actionInput.value = 'execute';
 
-        if (readRadio) readRadio.checked = true;
-
         setTimeout(() => {
-            form.submit();
+            document.getElementById('mainForm').submit();
         }, 200);
     }
 
-    function initDateSelectors() {
-        document.querySelectorAll('[data-datefield]').forEach(container => {
-            const input = container.querySelector('.date-input');
-            const select = container.querySelector('.date-select');
-            if (!input || !select) return;
-            select.addEventListener('change', () => {
-                const selectedField = select.value;
-                input.name = selectedField;
-            });
-            select.dispatchEvent(new Event('change'));
+    const blinkBoxes = document.querySelectorAll('.blink-box');
+    blinkBoxes.forEach(box => {
+        setTimeout(() => {
+            box.classList.remove('blink-box');
+        }, 3000);
+    });
+
+    const virtualCheckbox = document.querySelector('input[name="opt_virtualDateFields"]');
+    const dateGroups = document.querySelectorAll('.date-field-group');
+
+    function updateCheckboxValue(group) {
+        const select = group.querySelector('.date-select-right');
+        const checkbox = group.querySelector('.date-fulltext-checkbox');
+        const baseField = group.getAttribute('data-datefield');
+        if (!select || !checkbox || !baseField) return;
+        const selectedValue = select.value;
+        const waveQlKey = (selectedValue === 'Original') ? baseField : baseField + selectedValue;
+        checkbox.value = waveQlKey;
+    }
+
+    function updateVirtualDateFieldsState() {
+        const disabled = virtualCheckbox ? virtualCheckbox.checked : false;
+        dateGroups.forEach(group => {
+            const select = group.querySelector('.date-select-right');
+            const checkbox = group.querySelector('.date-fulltext-checkbox');
+            const input = group.querySelector('.date-input');
+            if (!select || !input) return;
+            if (disabled) {
+                select.disabled = true;
+                select.value = 'Original';
+                if (checkbox) {
+                   // checkbox.disabled = true;
+                    //checkbox.checked = false;
+                }
+            } else {
+                select.disabled = false;
+                if (checkbox) checkbox.disabled = false;
+            }
+            updateCheckboxValue(group);
         });
+    }
+
+    dateGroups.forEach(group => {
+        const select = group.querySelector('.date-select-right');
+        if (select) {
+            select.addEventListener('change', () => updateCheckboxValue(group));
+        }
+        updateCheckboxValue(group);
+    });
+
+    if (virtualCheckbox) {
+        virtualCheckbox.addEventListener('change', updateVirtualDateFieldsState);
+        updateVirtualDateFieldsState();
     }
 
     function enforceRadioState() {
@@ -126,13 +192,5 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }
     }
-
-    const readRadio = document.querySelector('input[name="mode"][value="read"]');
-    const writeRadio = document.querySelector('input[name="mode"][value="write"]');
-    if ((!readRadio.checked && !writeRadio.checked) && readRadio) {
-        readRadio.checked = true;
-    }
-
     enforceRadioState();
-    initDateSelectors();
 });

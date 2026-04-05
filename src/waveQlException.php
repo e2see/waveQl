@@ -5,45 +5,45 @@ namespace e2;
 
 /**
  * =================================================================================================
- * waveQl – Exception-Klassen für die waveQl-Komponente
+ * waveQl – Exception classes for the waveQl component
  * =================================================================================================
  *
- * Diese Datei definiert die Exception-Hierarchie für alle waveQl-Fehler.
- * Die Basisklasse ist waveQlException, von der alle spezifischen Exception-Typen erben.
- * Dadurch können Fehler je nach Schweregrad abgefangen und behandelt werden.
+ * This file defines the exception hierarchy for all waveQl errors.
+ * The base class is waveQlException, from which all specific exception types inherit.
+ * This allows errors to be caught and handled according to severity.
  *
  * -------------------------------------------------------------------------------------------------
- * Verwendung:
+ * Usage:
  *   try {
  *       $wave->read()->execute();
  *   } catch (waveQlQueryException $e) {
- *       // Fehler bei der SQL-Ausführung
- *       echo "Query fehlgeschlagen: " . $e->getMessage();
+ *       // Error during SQL execution
+ *       echo "Query failed: " . $e->getMessage();
  *   } catch (waveQlInvalidArgumentException $e) {
- *       // Ungültige Parameter
+ *       // Invalid parameters
  *   } catch (waveQlMetaException $e) {
- *       // Fehlende oder falsche Meta-Informationen (z. B. uniqueKey)
+ *       // Missing or incorrect meta information (e.g. uniqueKey)
  *   } catch (waveQlSecurityException $e) {
- *       // Unsichere SQL-Bedingung erkannt
+ *       // Unsafe SQL condition detected
  *   } catch (waveQlException $e) {
- *       // Allgemeiner Fehler
+ *       // General error
  *   }
  * -------------------------------------------------------------------------------------------------
  *
  * =================================================================================================
  */
 
-##### Basis-Exception für die waveQl-Komponente.
+##### Base exception for the waveQl component.
 class waveQlException extends \Exception {}
 
-##### Wird bei ungültigen Argumenten geworfen (z. B. fehlerhafte Felddefinitionen).
+##### Thrown for invalid arguments (e.g. malformed field definitions).
 class waveQlInvalidArgumentException extends waveQlException {}
 
-##### Wird bei Fehlern während der SQL-Ausführung geworfen.
+##### Thrown for errors during SQL execution.
 class waveQlQueryException extends waveQlException {}
 
-##### Wird bei fehlenden oder falschen Meta-Informationen geworfen (z. B. uniqueKey fehlt).
+##### Thrown for missing or incorrect meta information (e.g. uniqueKey missing).
 class waveQlMetaException extends waveQlException {}
 
-##### Wird bei Sicherheitsverletzungen geworfen (z. B. unsichere sqlCondition).
+##### Thrown for security violations (e.g. unsafe sqlCondition).
 class waveQlSecurityException extends waveQlException {}

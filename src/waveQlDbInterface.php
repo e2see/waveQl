@@ -1,26 +1,27 @@
 <?php
+
 declare(strict_types=1);
 
 namespace e2;
 
 /**
  * =================================================================================================
- * waveQlDbInterface – Vertrag für Datenbankadapter
+ * waveQlDbInterface – Contract for database adapters
  * =================================================================================================
  *
- * Diese Schnittstelle definiert alle Methoden, die ein Adapter bereitstellen muss,
- * um mit waveQl zusammenzuarbeiten. Dadurch können unterschiedliche Datenbank‑Bibliotheken
- * (z. B. mysqli, PDO) ausgetauscht werden, ohne die Kernlogik zu ändern.
+ * This interface defines all methods that an adapter must provide
+ * to work with waveQl. This allows different database libraries
+ * (e.g. mysqli, PDO) to be swapped without changing the core logic.
  *
- * Jeder Adapter muss:
- *   - Queries ausführen (vorbereitet oder direkt)
- *   - Zeichenketten escapen
- *   - die letzte eingefügte ID und die Anzahl betroffener Zeilen liefern
- *   - Fehlermeldungen zurückgeben
- *   - Identifier (Tabellen‑/Spaltennamen) korrekt quoten
+ * Each adapter must:
+ *   - Execute queries (prepared or direct)
+ *   - Escape strings
+ *   - Return the last inserted ID and the number of affected rows
+ *   - Return error messages
+ *   - Correctly quote identifiers (table/column names)
  *
  * -------------------------------------------------------------------------------------------------
- * Beispiel (mit mysqli):
+ * Example (with mysqli):
  *   $adapter = new dbAdapterMysqli($mysqli);
  *   $result = $adapter->query('SELECT * FROM users');
  *   $data = $adapter->fetchAll($result);
@@ -30,33 +31,33 @@ namespace e2;
  */
 interface waveQlDbInterface
 {
-    ##### Führt eine Query direkt aus (nicht vorbereitet).
+    ##### Executes a query directly (not prepared).
     public function query(string $sql): mixed;
 
-    ##### Bereitet eine SQL-Anweisung vor.
+    ##### Prepares an SQL statement.
     public function prepare(string $sql): mixed;
 
-    ##### Führt ein vorbereitetes Statement mit Parametern aus.
+    ##### Executes a prepared statement with parameters.
     public function execute(mixed $stmt, array $params, string $types): bool;
 
-    ##### Escaped einen String für den direkten Einbau in SQL.
+    ##### Escapes a string for direct insertion into SQL.
     public function escape(string $value): string;
 
-    ##### Liefert die letzte eingefügte ID.
+    ##### Returns the last inserted ID.
     public function lastInsertId(): int|string;
 
-    ##### Liefert die Anzahl betroffener Zeilen der letzten Operation.
+    ##### Returns the number of affected rows of the last operation.
     public function affectedRows(): int;
 
-    ##### Holt alle Zeilen aus einem Ergebnis (als assoziatives Array).
+    ##### Fetches all rows from a result (as associative array).
     public function fetchAll(mixed $result): array;
 
-    ##### Liefert die letzte Fehlermeldung.
+    ##### Returns the last error message.
     public function error(): string;
 
-    ##### Prüft, ob das vorbereitete Statement ein Resultset (SELECT o.ä.) zurückgibt.
+    ##### Checks whether the prepared statement returns a result set (SELECT etc.).
     public function isResultSet(mixed $stmt): bool;
 
-    ##### Quotiert einen Identifier (Tabellen‑, Spaltenname) für die konkrete Datenbank.
+    ##### Quotes an identifier (table, column name) for the concrete database.
     public function quoteIdentifier(string $name, bool $splitDot = false): string;
 }

@@ -6,19 +6,19 @@ namespace e2;
 
 /**
  * =================================================================================================
- * waveQlWrite – Logik für INSERT, UPDATE, DELETE (Write)
+ * waveQlWrite – Logic for INSERT, UPDATE, DELETE (Write)
  * =================================================================================================
  *
- * Diese Klasse erweitert waveQlCore und ermöglicht das Einfügen, Aktualisieren und Löschen von
- * Datensätzen. Sie arbeitet nach dem Prinzip: Das Vorhandensein des uniqueKey‑Feldes im Werte‑Array
- * entscheidet über INSERT (fehlt) oder UPDATE (vorhanden). Zusätzliche Optionen:
+ * This class extends waveQlCore and enables inserting, updating and deleting records.
+ * It works on the principle: The presence of the uniqueKey field in the values array
+ * decides between INSERT (missing) or UPDATE (present). Additional options:
  *
- *   - 'returning'    : Liefert nach INSERT/UPDATE den kompletten Datensatz zurück.
- *   - 'safe'         : Verhindert DELETE ohne WHERE‑Bedingung.
- *   - 'updatePrimaryKey' : Erlaubt die Änderung des Primärschlüssels (standardmäßig deaktiviert).
+ *   - 'returning'    : Returns the complete record after INSERT/UPDATE.
+ *   - 'safe'         : Prevents DELETE without WHERE condition.
+ *   - 'updatePrimaryKey' : Allows changing the primary key (disabled by default).
  *
  * -------------------------------------------------------------------------------------------------
- * Verwendung:
+ * Usage:
  *   $write = $wave->write();
  *
  *   // INSERT
@@ -28,7 +28,7 @@ namespace e2;
  *
  *   // UPDATE
  *   $affected = $write->setMeta(['uniqueKey' => 'id'])
- *                     ->setValues(['id' => 42, 'name' => 'Max (aktualisiert)'])
+ *                     ->setValues(['id' => 42, 'name' => 'Max (updated)'])
  *                     ->execute();
  *
  *   // DELETE
@@ -47,7 +47,7 @@ class waveQlWrite extends waveQlCore
     protected array $values = [];
 
 
-    ########################### KONSTRUKTOR
+    ########################### CONSTRUCTOR
 
 
     public function __construct(waveQlDbInterface $db, array $tableManifest, array $keyManifest, array $options = [])
@@ -56,10 +56,10 @@ class waveQlWrite extends waveQlCore
     }
 
 
-    ########################### API-METHODEN
+    ########################### API METHODS
 
 
-    ##### Setzt Meta‑Informationen (uniqueKey, returning, safe, updatePrimaryKey)
+    ##### Sets meta information (uniqueKey, returning, safe, updatePrimaryKey).
     public function setMeta(array $meta): self
     {
         $this->meta = $meta;
@@ -67,7 +67,7 @@ class waveQlWrite extends waveQlCore
     }
 
 
-    ##### Setzt die Werte für INSERT/UPDATE/DELETE
+    ##### Sets the values for INSERT/UPDATE/DELETE.
     public function setValues(array $values): self
     {
         $this->values = $values;
@@ -75,12 +75,12 @@ class waveQlWrite extends waveQlCore
     }
 
 
-    ##### Führt INSERT oder UPDATE aus (abhängig vom uniqueKey)
+    ##### Executes INSERT or UPDATE (depending on uniqueKey).
     public function execute(): int|array|null
     {
         $uniqueKey = $this->meta['uniqueKey'] ?? null;
         if (!$uniqueKey) {
-            throw new waveQlMetaException('Für Write-Operationen muss uniqueKey in Meta gesetzt sein.');
+            throw new waveQlMetaException('For write operations uniqueKey must be set in meta.');
         }
 
         if (isset($this->values[$uniqueKey])) {
@@ -91,12 +91,12 @@ class waveQlWrite extends waveQlCore
     }
 
 
-    ##### Führt ein INSERT aus (immer, unabhängig vom uniqueKey)
+    ##### Executes an INSERT (always, regardless of uniqueKey).
     public function insert(): int|array
     {
         $uniqueKey = $this->meta['uniqueKey'] ?? null;
         if (!$uniqueKey) {
-            throw new waveQlMetaException('Für INSERT muss uniqueKey in Meta gesetzt sein.');
+            throw new waveQlMetaException('For INSERT uniqueKey must be set in meta.');
         }
 
         $fields       = [];
@@ -104,11 +104,11 @@ class waveQlWrite extends waveQlCore
         $params       = [];
         $types        = '';
 
-        //-- Spalten und Platzhalter aus den Felddefinitionen bauen
+        //-- Build columns and placeholders from field definitions
         foreach ($this->values as $field => $value) {
             $detail = $this->getFieldDetail($field);
             if (!$detail) {
-                throw new waveQlInvalidArgumentException("Feld '$field' nicht in keyManifest definiert.");
+                throw new waveQlInvalidArgumentException("Field '$field' not defined in keyManifest.");
             }
             $fields[]        = $detail['fullQuoted'];
             $placeholders[]  = '?';
@@ -118,7 +118,7 @@ class waveQlWrite extends waveQlCore
 
         $tableDetail = $this->getTableDetail($this->tableManifest['tableName'] ?? '');
         if (!$tableDetail) {
-            throw new waveQlMetaException('Keine Tabelle definiert.');
+            throw new waveQlMetaException('No table defined.');
         }
         $table = $tableDetail['nameQuoted'];
 
@@ -126,7 +126,7 @@ class waveQlWrite extends waveQlCore
 
         $stmt = $this->db->prepare($sql);
         if (!$stmt) {
-            throw new waveQlQueryException('Prepare fehlgeschlagen: ' . $this->db->error());
+            throw new waveQlQueryException('Prepare failed: ' . $this->db->error());
         }
 
         $this->db->execute($stmt, $params, $types);
@@ -140,17 +140,17 @@ class waveQlWrite extends waveQlCore
     }
 
 
-    ##### Führt ein UPDATE aus
+    ##### Executes an UPDATE.
     public function update(): int|array
     {
         $uniqueKey = $this->meta['uniqueKey'] ?? null;
         if (!$uniqueKey) {
-            throw new waveQlMetaException('Für UPDATE muss uniqueKey in Meta gesetzt sein.');
+            throw new waveQlMetaException('For UPDATE uniqueKey must be set in meta.');
         }
 
         $idValue = $this->values[$uniqueKey] ?? null;
         if ($idValue === null) {
-            throw new waveQlInvalidArgumentException("uniqueKey '$uniqueKey' nicht in values vorhanden.");
+            throw new waveQlInvalidArgumentException("uniqueKey '$uniqueKey' not present in values.");
         }
 
         $setParts         = [];
@@ -158,14 +158,14 @@ class waveQlWrite extends waveQlCore
         $types            = '';
         $updatePrimaryKey = $this->meta['updatePrimaryKey'] ?? false;
 
-        //-- SET‑Teil aufbauen, ggf. uniqueKey überspringen
+        //-- Build SET part, optionally skip uniqueKey
         foreach ($this->values as $logicalName => $value) {
             if ($logicalName === $uniqueKey && !$updatePrimaryKey) {
                 continue;
             }
             $detail = $this->getFieldDetail($logicalName);
             if (!$detail) {
-                throw new waveQlInvalidArgumentException("Feld '$logicalName' nicht in keyManifest definiert.");
+                throw new waveQlInvalidArgumentException("Field '$logicalName' not defined in keyManifest.");
             }
             $setParts[] = $detail['fullQuoted'] . ' = ?';
             $params[]   = $value;
@@ -176,15 +176,15 @@ class waveQlWrite extends waveQlCore
             return 0;
         }
 
-        //-- WHERE‑Teil
+        //-- WHERE part
         $idDetail = $this->getFieldDetail($uniqueKey);
         if (!$idDetail) {
-            throw new waveQlInvalidArgumentException("uniqueKey '$uniqueKey' nicht in keyManifest definiert.");
+            throw new waveQlInvalidArgumentException("uniqueKey '$uniqueKey' not defined in keyManifest.");
         }
 
         $tableDetail = $this->getTableDetail($this->tableManifest['tableName'] ?? '');
         if (!$tableDetail) {
-            throw new waveQlMetaException('Keine Tabelle definiert.');
+            throw new waveQlMetaException('No table defined.');
         }
         $table = $tableDetail['nameQuoted'];
 
@@ -195,7 +195,7 @@ class waveQlWrite extends waveQlCore
 
         $stmt = $this->db->prepare($sql);
         if (!$stmt) {
-            throw new waveQlQueryException('Prepare fehlgeschlagen: ' . $this->db->error());
+            throw new waveQlQueryException('Prepare failed: ' . $this->db->error());
         }
 
         $this->db->execute($stmt, $params, $types);
@@ -209,31 +209,31 @@ class waveQlWrite extends waveQlCore
     }
 
 
-    ##### Führt ein DELETE aus
+    ##### Executes a DELETE.
     public function delete(): int
     {
         $uniqueKey = $this->meta['uniqueKey'] ?? null;
         if (!$uniqueKey) {
-            throw new waveQlMetaException('Für DELETE muss uniqueKey in Meta gesetzt sein.');
+            throw new waveQlMetaException('For DELETE uniqueKey must be set in meta.');
         }
         $safe = $this->meta['safe'] ?? false;
         if ($safe && empty($this->values)) {
-            throw new waveQlMetaException('Sicherheitsmodus: DELETE ohne WHERE-Bedingung nicht erlaubt.');
+            throw new waveQlMetaException('Safe mode: DELETE without WHERE condition not allowed.');
         }
 
         $idValue = $this->values[$uniqueKey] ?? null;
         if ($idValue === null) {
-            throw new waveQlInvalidArgumentException("uniqueKey '$uniqueKey' nicht in values vorhanden.");
+            throw new waveQlInvalidArgumentException("uniqueKey '$uniqueKey' not present in values.");
         }
 
         $idDetail = $this->getFieldDetail($uniqueKey);
         if (!$idDetail) {
-            throw new waveQlInvalidArgumentException("uniqueKey '$uniqueKey' nicht in keyManifest definiert.");
+            throw new waveQlInvalidArgumentException("uniqueKey '$uniqueKey' not defined in keyManifest.");
         }
 
         $tableDetail = $this->getTableDetail($this->tableManifest['tableName'] ?? '');
         if (!$tableDetail) {
-            throw new waveQlMetaException('Keine Tabelle definiert.');
+            throw new waveQlMetaException('No table defined.');
         }
         $table = $tableDetail['nameQuoted'];
 
@@ -243,7 +243,7 @@ class waveQlWrite extends waveQlCore
 
         $stmt = $this->db->prepare($sql);
         if (!$stmt) {
-            throw new waveQlQueryException('Prepare fehlgeschlagen: ' . $this->db->error());
+            throw new waveQlQueryException('Prepare failed: ' . $this->db->error());
         }
 
         $this->db->execute($stmt, $params, $types);
@@ -251,7 +251,7 @@ class waveQlWrite extends waveQlCore
     }
 
 
-    ##### Liefert die SQL‑Query (für Debug) – entweder INSERT oder UPDATE
+    ##### Returns the SQL query (for debugging) – either INSERT or UPDATE.
     public function getQuery(): string|false
     {
         $uniqueKey = $this->meta['uniqueKey'] ?? null;
@@ -265,10 +265,10 @@ class waveQlWrite extends waveQlCore
     }
 
 
-    ########################### INTERNE HELFER
+    ########################### INTERNAL HELPERS
 
 
-    ##### Holt nach INSERT/UPDATE den kompletten Datensatz zurück (returning)
+    ##### Fetches the complete record after INSERT/UPDATE (returning).
     protected function fetchReturning($id)
     {
         $uniqueKey = $this->meta['uniqueKey'] ?? null;
@@ -283,7 +283,7 @@ class waveQlWrite extends waveQlCore
     }
 
 
-    ##### Baut eine INSERT‑Query als String (für Debug)
+    ##### Builds an INSERT query as a string (for debugging).
     protected function buildInsertQuery(): string|false
     {
         $fields = [];
@@ -304,7 +304,7 @@ class waveQlWrite extends waveQlCore
     }
 
 
-    ##### Baut eine UPDATE‑Query als String (für Debug)
+    ##### Builds an UPDATE query as a string (for debugging).
     protected function buildUpdateQuery(): string|false
     {
         $uniqueKey = $this->meta['uniqueKey'] ?? null;

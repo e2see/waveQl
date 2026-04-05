@@ -38,14 +38,8 @@ $res = $mysqli->query("SELECT DISTINCT name FROM continents ORDER BY name");
 if ($res) while ($row = $res->fetch_assoc()) $continentNames[] = $row['name'];
 
 // ----------------------------------------------------------------------
-// Field definitions
+// Field definitions (original manifest, NO virtual fields here)
 // ----------------------------------------------------------------------
-$waveOptions = [
-    'prepared'          => false,
-    'virtualDateFields' => true,
-    'allowSqlCondition' => false,
-];
-
 $baseKeyManifest = [
     'CountryName'    => ['rowName' => 'c.name',          'type' => 'string'],
     'Population'     => ['rowName' => 'c.population',    'type' => 'integer'],
@@ -60,23 +54,6 @@ $baseKeyManifest = [
         'searchTarget' => 'CountryName,Capital,ContinentName'
     ],
 ];
-
-$filterFields = array_keys(array_diff_key($baseKeyManifest, ['~meta~' => 0]));
-$dateFields = [];
-$virtualSuffixes = ['YEAR', 'MONTH', 'DAY', 'HOUR', 'MINUTE', 'QUARTER', 'DATE', 'TIME', 'UTS'];
-foreach ($baseKeyManifest as $key => $def) {
-    if (isset($def['type']) && in_array($def['type'], ['date', 'dateTime'])) {
-        $dateFields[] = $key;
-        foreach ($virtualSuffixes as $suffix) {
-            $virtualName = $key . $suffix;
-            if (!in_array($virtualName, $filterFields)) {
-                $filterFields[] = $virtualName;
-            }
-        }
-    }
-}
-
-$keyManifest = $baseKeyManifest;
 
 $tableManifest = [
     'tableName' => 'countries',
@@ -96,7 +73,7 @@ $tableManifest = [
 // Form processing
 // ----------------------------------------------------------------------
 $mode         = ($_POST['mode'] ?? '') === 'write' ? 'write' : 'read';
-$action       = $_POST['action'] ?? '';
+$action       = $_POST['action'] ?? '';          // 'preview' or 'execute'
 $filter       = [];
 $meta         = [];
 $writeData    = [];
@@ -107,33 +84,103 @@ $result       = null;
 $sql          = null;
 $execError    = null;
 
+// Construct options: default = true (active). Checkbox "off" means user wants to disable.
+$opt_virtualDateFields = !isset($_POST['opt_virtualDateFields']);
+$opt_allowSqlCondition = !isset($_POST['opt_allowSqlCondition']);
+$opt_prepared          = !isset($_POST['opt_prepared']);
+
+$waveOptions = [
+    'virtualDateFields' => $opt_virtualDateFields,
+    'allowSqlCondition' => $opt_allowSqlCondition,
+    'prepared'          => $opt_prepared,
+];
+
 // ----------------------------------------------------------------------
-// Server-side access restrictions (no exception – just block action)
+// Build list of filter fields for UI (including virtual ones for display only)
+// ----------------------------------------------------------------------
+$uiFilterFields = array_keys(array_diff_key($baseKeyManifest, ['~meta~' => 0]));
+$dateFields = [];
+foreach ($baseKeyManifest as $key => $def) {
+    if (isset($def['type']) && in_array($def['type'], ['date', 'dateTime'])) {
+        $dateFields[] = $key;
+    }
+}
+$virtualSuffixes = ['YEAR', 'MONTH', 'DAY', 'QUARTER', 'DATE', 'TIME', 'HOUR', 'MINUTE', 'UTS'];
+$allUiFilterFields = $uiFilterFields;
+foreach ($dateFields as $df) {
+    foreach ($virtualSuffixes as $suf) {
+        $allUiFilterFields[] = $df . $suf;
+    }
+}
+
+$originalFields = $uiFilterFields;
+
+// ----------------------------------------------------------------------
+// Server-side access restrictions
 // ----------------------------------------------------------------------
 if ($action !== '') {
     if (($mode === 'read' && !$allowRead) || ($mode === 'write' && !$allowWrite)) {
-        $action = ''; // abort action, no extra error message (template will show warning)
+        $action = '';
     }
 }
-// If current mode is not allowed, switch to first allowed one (for UI display)
 if ($mode === 'write' && !$allowWrite) {
     $mode = $allowRead ? 'read' : '';
 } elseif ($mode === 'read' && !$allowRead) {
     $mode = $allowWrite ? 'write' : '';
 }
 
+// ----------------------------------------------------------------------
+// Read mode: gather filter values, meta, fulltext
+// ----------------------------------------------------------------------
 try {
     if ($mode === 'read') {
-        foreach ($filterFields as $field) {
+        // Filterwerte sammeln – für normale Felder direkt, für Datumsfelder kombiniert
+        $filter = [];
+
+        // 1. Normale Felder (keine Datumsfelder)
+        foreach ($originalFields as $field) {
+            if (in_array($field, $dateFields)) continue;
             if (isset($_POST[$field]) && $_POST[$field] !== '') {
                 $filter[$field] = trim($_POST[$field]);
             }
         }
+
+        // 2. Datumsfelder – aus Basiswert + Funktion den waveQl‑Schlüssel bauen
+        foreach ($dateFields as $baseField) {
+            $value = trim($_POST[$baseField] ?? '');
+            if ($value === '') continue;
+            $function = trim($_POST[$baseField . '_function'] ?? 'Original');
+            // Serverseitige Absicherung: Wenn virtuelle Felder deaktiviert sind, ignoriere Funktion
+            if (!$opt_virtualDateFields) {
+                $function = 'Original';
+            }
+            if ($function === 'Original') {
+                $filter[$baseField] = $value;
+            } else {
+                $waveQlKey = $baseField . $function;
+                $filter[$waveQlKey] = $value;
+            }
+        }
+
         if (isset($_POST['sort']) && $_POST['sort'] !== '') $meta['sort'] = trim($_POST['sort']);
         if (isset($_POST['pageSize']) && is_numeric($_POST['pageSize'])) $meta['pageSize'] = (int)$_POST['pageSize'];
         if (isset($_POST['pageNumber']) && is_numeric($_POST['pageNumber'])) $meta['pageNumber'] = (int)$_POST['pageNumber'];
-        if (isset($_POST['searchString']) && $_POST['searchString'] !== '') $meta['searchString'] = trim($_POST['searchString']);
-        if (isset($_POST['searchTarget']) && $_POST['searchTarget'] !== '') $meta['searchTarget'] = trim($_POST['searchTarget']);
+
+        $fulltextFields = $_POST['fulltext_fields'] ?? [];
+        if (!is_array($fulltextFields)) $fulltextFields = [];
+        $fulltextSearchString = trim($_POST['fulltext_search_string'] ?? '');
+
+        if (!empty($fulltextFields)) {
+            $meta['searchTarget'] = implode(',', $fulltextFields);
+        }
+
+        if (!empty($fulltextSearchString)) {
+            $meta['searchString'] = $fulltextSearchString;
+        }
+
+        if ($opt_allowSqlCondition && isset($_POST['sqlCondition']) && trim($_POST['sqlCondition']) !== '') {
+            $meta['sqlCondition'] = trim($_POST['sqlCondition']);
+        }
     } else {
         $writeFields = ['CountryName', 'Population', 'AreaKm2', 'Capital', 'FoundedYear'];
         foreach ($writeFields as $field) {
@@ -152,31 +199,59 @@ try {
 }
 
 // ----------------------------------------------------------------------
-// Execution
+// Create waveQl instance to get live manifests (without executing a query)
 // ----------------------------------------------------------------------
+$liveKeyManifest = $baseKeyManifest;
+$liveMetaManifest = $meta;
+$liveTableManifest = $tableManifest;
+
+try {
+    $waveForManifest = \e2\waveQl::create($mysqli, $tableManifest, $baseKeyManifest, $waveOptions);
+    $readInstance = $waveForManifest->read();
+    if (!empty($filter)) $readInstance->setValues($filter);
+    if (!empty($meta)) $readInstance->setMeta($meta);
+    $liveKeyManifest = $readInstance->getManifest('key', 'live');
+    $liveMetaManifest = $readInstance->getManifest('meta', 'live');
+} catch (Exception $e) {
+    // Fallback
+}
+
+// ----------------------------------------------------------------------
+// Execution (or preview)
+// ----------------------------------------------------------------------
+$blinkSql    = false;
+$blinkResult = false;
+
 if ($action !== '') {
     try {
-        $wave = \e2\waveQl::create($mysqli, $tableManifest, $keyManifest, $waveOptions);
+        $wave = \e2\waveQl::create($mysqli, $tableManifest, $baseKeyManifest, $waveOptions);
 
         if ($mode === 'read') {
             $builder = $wave->read();
             if (!empty($meta)) $builder->setMeta($meta);
             if (!empty($filter)) $builder->setValues($filter);
-            if ($action === 'query') {
+
+            if ($action === 'preview') {
                 $sql = $builder->getQuery();
+                $blinkSql = true;
             } else {
                 $result = $builder->execute();
                 $sql = $builder->getQuery();
+                $blinkSql = true;
+                $blinkResult = true;
             }
         } else {
             $builder = $wave->write();
             if (!empty($meta)) $builder->setMeta($meta);
             if (!empty($writeData)) $builder->setValues($writeData);
-            if ($action === 'query') {
+            if ($action === 'preview') {
                 $sql = $builder->getQuery();
+                $blinkSql = true;
             } else {
                 $result = $builder->execute();
                 $sql = $builder->getQuery();
+                $blinkSql = true;
+                $blinkResult = true;
             }
         }
     } catch (Exception $e) {
@@ -184,15 +259,14 @@ if ($action !== '') {
     }
 }
 
-// ----------------------------------------------------------------------
-// Output preparation
-// ----------------------------------------------------------------------
 if ($sql) {
     $sqlOutput = htmlspecialchars($sql);
 }
 if ($execError) {
     $errorMsg = $execError;
 }
+
+// Result output for read
 if ($result !== null && $mode === 'read' && $action === 'execute') {
     ob_start();
     if (count($result) > 0) {
@@ -223,3 +297,11 @@ if ($result !== null && $mode === 'read' && $action === 'execute') {
     }
     $resultOutput = ob_get_clean();
 }
+
+// Provide JavaScript globals for preset handling
+?>
+<script>
+    var dateFieldNames = <?= json_encode($dateFields) ?>;
+    var virtualSuffixes = <?= json_encode($virtualSuffixes) ?>;
+</script>
+<?php

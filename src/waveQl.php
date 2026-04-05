@@ -18,14 +18,14 @@ namespace e2;
  *
  *
  * =================================================================================================
- * waveQl – Einstiegspunkt / Factory für den SQL‑Query‑Builder
+ * waveQl – Entry point / Factory for the SQL Query Builder
  * =================================================================================================
  *
- * Dies ist der zentrale Einstiegspunkt. Über die statische Methode create() wird eine Instanz
- * erzeugt, die dann Read‑ und Write‑Objekte bereitstellt.
+ * This is the central entry point. The static create() method creates an instance
+ * that then provides Read and Write objects.
  *
  * -------------------------------------------------------------------------------------------------
- * Verwendung:
+ * Usage:
  *   $wave = \e2\waveQl::create($mysqli, $tableManifest, $keyManifest, ['prepared' => true]);
  *
  *   // Read
@@ -43,7 +43,7 @@ namespace e2;
  *   // Write (UPDATE)
  *   $affected = $wave->write()
  *                    ->setMeta(['uniqueKey' => 'id'])
- *                    ->setValues(['id' => 42, 'name' => 'Max (neu)'])
+ *                    ->setValues(['id' => 42, 'name' => 'Max (new)'])
  *                    ->execute();
  *
  *   // Write (DELETE)
@@ -64,7 +64,7 @@ $waveQlAllowlist = [
     'waveQlWrite',
 ];
 
-// Exception-Klassen, die alle in waveQlException.php definiert sind
+// Exception classes, all defined in waveQlException.php
 $exceptionClasses = [
     'waveQlException',
     'waveQlInvalidArgumentException',
@@ -79,7 +79,7 @@ spl_autoload_register(function ($className) use ($waveQlAllowlist, $exceptionCla
     }
     $shortName = substr($className, strlen(__NAMESPACE__) + 1);
 
-    // Für Exception-Klassen die gemeinsame Datei laden
+    // For exception classes load the common file
     if (in_array($shortName, $exceptionClasses, true)) {
         $file = __DIR__ . '/waveQlException.php';
         if (file_exists($file)) {
@@ -109,9 +109,9 @@ class waveQl
     private array $keyManifest;
     private array $options;
 
-    ########################### KONSTRUKTOR & FACTORY
+    ########################### CONSTRUCTOR & FACTORY
 
-    ##### Erzeugt eine neue waveQl‑Instanz
+    ##### Creates a new waveQl instance
     private function __construct(waveQlDbInterface $db, array $tableManifest, array $keyManifest, array $options = [])
     {
         $this->db            = $db;
@@ -120,29 +120,29 @@ class waveQl
         $this->options       = $options;
     }
 
-    ##### Statische Factory – erzeugt den passenden Adapter und gibt eine Instanz zurück
+    ##### Static factory – creates the appropriate adapter and returns an instance
     public static function create($db, array $tableManifest, array $keyManifest, array $options = []): self
     {
-        //-- mysqli-Instanz wird automatisch in den Adapter gewrappt
+        //-- mysqli instance is automatically wrapped into the adapter
         if ($db instanceof \mysqli) {
             $adapter = new dbAdapterMysqli($db);
         } elseif ($db instanceof waveQlDbInterface) {
             $adapter = $db;
         } else {
-            throw new waveQlInvalidArgumentException('Nur mysqli wird derzeit unterstützt.');
+            throw new waveQlInvalidArgumentException('Only mysqli is currently supported.');
         }
         return new self($adapter, $tableManifest, $keyManifest, $options);
     }
 
-    ########################### ÖFFENTLICHE METHODEN
+    ########################### PUBLIC METHODS
 
-    ##### Gibt ein Read‑Objekt zurück
+    ##### Returns a Read object
     public function read(): waveQlRead
     {
         return new waveQlRead($this->db, $this->tableManifest, $this->keyManifest, $this->options);
     }
 
-    ##### Gibt ein Write‑Objekt zurück
+    ##### Returns a Write object
     public function write(): waveQlWrite
     {
         return new waveQlWrite($this->db, $this->tableManifest, $this->keyManifest, $this->options);

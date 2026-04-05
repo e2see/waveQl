@@ -6,22 +6,22 @@ namespace e2;
 
 /**
  * =================================================================================================
- * waveQlCore – Abstrakte Basisklasse für Read‑ und Write‑Operationen
+ * waveQlCore – Abstract base class for read and write operations
  * =================================================================================================
  *
- * Diese Klasse enthält die gesamte gemeinsame Logik für alle waveQl-Operationen:
- *   - Verwaltung von Felddefinitionen, Tabelleninformationen
- *   - Erzeugung virtueller Datumsfelder (z. B. feldYEAR, feldMONTH)
- *   - Operator‑Parsing (>, <, ~, NULL, BLANK, EMPTY, Bereichsoperatoren)
- *   - Sicherheitsprüfungen für benutzerdefinierte SQL‑Bedingungen
- *   - Join‑Handling, Identifier‑Quoting
- *   - Prepared‑Statement‑Parameter‑Sammlung
+ * This class contains all common logic for all waveQl operations:
+ *   - Management of field definitions, table information
+ *   - Generation of virtual date fields (e.g. fieldYEAR, fieldMONTH)
+ *   - Operator parsing (>, <, ~, NULL, BLANK, EMPTY, range operators)
+ *   - Security checks for user-defined SQL conditions
+ *   - Join handling, identifier quoting
+ *   - Prepared statement parameter collection
  *
- * Sie wird von waveQlRead und waveQlWrite erweitert und stellt die grundlegenden
- * Datenstrukturen sowie Hilfsmethoden bereit.
+ * It is extended by waveQlRead and waveQlWrite and provides the basic
+ * data structures as well as helper methods.
  *
  * -------------------------------------------------------------------------------------------------
- * Verwendung in Unterklassen:
+ * Usage in subclasses:
  *   $core = new waveQlRead($adapter, $tableManifest, $keyManifest);
  *   $core->setValues(['age' => '>18'])->execute();
  * -------------------------------------------------------------------------------------------------
@@ -47,7 +47,7 @@ abstract class waveQlCore
     protected readonly bool $optionAllowSqlCondition;
     protected readonly array $sqlAllowedGroups;
 
-    ########################### OPERATOR-KÜRZEL
+    ########################### OPERATOR SHORTCUTS
 
     protected const OP_EQUAL         = 'e';
     protected const OP_NOT_EQUAL     = 'ne';
@@ -64,7 +64,7 @@ abstract class waveQlCore
     protected const OP_IS_EMPTY      = 'is_empty';
     protected const OP_IS_NOT_EMPTY  = 'is_not_empty';
 
-    ########################### SPEZIELLE WERTE
+    ########################### SPECIAL VALUES
 
     protected const VAL_UNSET       = 'UNSET';
     protected const VAL_NULL        = 'NULL';
@@ -74,12 +74,12 @@ abstract class waveQlCore
     protected const VAL_EMPTY       = 'EMPTY';
     protected const VAL_NOT_EMPTY   = '!EMPTY';
 
-    ########################### SORTIERRICHTUNGEN
+    ########################### SORT DIRECTIONS
 
     protected const SORT_DESC       = '>';
     protected const SORT_ASC        = '<';
 
-    ########################### FELDTYPEN
+    ########################### FIELD TYPES
 
     protected const TYPE_STRING     = 'string';
     protected const TYPE_INTEGER    = 'integer';
@@ -122,19 +122,30 @@ abstract class waveQlCore
         self::TYPE_DATETIME,
     ];
 
-    ########################### GRUPPENKONSTANTEN
+    ########################### GROUP CONSTANTS
 
     protected const GROUP_OR     = '~or~';
     protected const GROUP_META   = '~meta~';
 
-    ########################### SQL-BLACKLIST-GRUPPEN (CamelCase)
+    ########################### SQL BLACKLIST GROUPS (CamelCase)
 
     protected const SQL_BLACKLIST_GROUPS = [
         'basicDanger' => [
-            '/\bALTER\b/i', '/\bCALL\b/i', '/\bCREATE\b/i', '/\bDO\b/i',
-            '/\bDROP\b/i', '/\bFLUSH\b/i', '/\bHANDLER\b/i', '/\bINSTALL\b/i',
-            '/\bPURGE\b/i', '/\bRENAME\b/i', '/\bREPLACE\b/i', '/\bRESET\b/i',
-            '/\bTRUNCATE\b/i', '/\bUNINSTALL\b/i', '/\bWAIT_FOR\b/i',
+            '/\bALTER\b/i',
+            '/\bCALL\b/i',
+            '/\bCREATE\b/i',
+            '/\bDO\b/i',
+            '/\bDROP\b/i',
+            '/\bFLUSH\b/i',
+            '/\bHANDLER\b/i',
+            '/\bINSTALL\b/i',
+            '/\bPURGE\b/i',
+            '/\bRENAME\b/i',
+            '/\bREPLACE\b/i',
+            '/\bRESET\b/i',
+            '/\bTRUNCATE\b/i',
+            '/\bUNINSTALL\b/i',
+            '/\bWAIT_FOR\b/i',
         ],
         'systemTables' => [
             '/\bINFORMATION_SCHEMA\b/i',
@@ -189,49 +200,53 @@ abstract class waveQlCore
         ],
     ];
 
-    ########################### KONSTRUKTOR & INITIALISIERUNG
+    ########################### CONSTRUCTOR & INITIALIZATION
 
-    ##### Konstruktor – initialisiert die Manifeste und generiert automatische Felder.
     public function __construct(waveQlDbInterface $db, array $tableManifest, array $keyManifest, array $options = [])
     {
-
         $this->optionVirtualDateFields = $options['virtualDateFields'] ?? true;
         $this->optionAllowSqlCondition = $options['allowSqlCondition'] ?? false;
         $this->sqlAllowedGroups        = $options['sqlAllowedGroups'] ?? [];
 
-
         $this->db            = $db;
         $Migrated            = $this->migrateLegacyData($tableManifest, $keyManifest);
-        $this->metaManifest  = $this->validateMetaManifest($Migrated['keyManifest'][self::GROUP_META] ?? [], $Migrated['tableManifest'][self::GROUP_META] ?? []);
+
+        // -- Validate table manifest
         $this->tableManifest = $this->validateTableManifest($Migrated['tableManifest']);
-        $keyManifest         = $this->validateKeyManifest($Migrated['keyManifest']);
 
-        //-- Generiere virtuelle Datumsfelder (z. B. feldYEAR)
+        // -- Validate key manifest (removes ~meta~)
+        $keyManifest = $this->validateKeyManifest($Migrated['keyManifest']);
 
+        // -- Generate virtual date fields
         if ($this->optionVirtualDateFields) {
-            $baseKeyManifest = $keyManifest;
-            foreach ($baseKeyManifest as $key => $config) {
-                $autoFields = $this->generateAutoFields($key, $config);
+            $orderedKeyManifest = [];
+            foreach ($keyManifest as $k => $cfg) {
+                $orderedKeyManifest[$k] = $cfg;
+                $autoFields = $this->generateAutoFields($k, $cfg);
                 foreach ($autoFields as $autoKey => $autoDef) {
-                    $keyManifest[$autoKey] = $autoDef;
+                    $orderedKeyManifest[$autoKey] = $autoDef;
                 }
             }
+            $keyManifest = $orderedKeyManifest;
         }
+
+        // -- Set final keyManifest (without ~meta~)
         $this->keyManifest = $keyManifest;
+        $this->keyManifestLive = $this->keyManifest;
 
-
-        unset($Migrated, $keyManifest);
-
-        $this->keyManifestLive  = $this->keyManifest;
+        // -- Calculate meta manifest (now uses $this->keyManifest for validation)
+        $rawMeta = $Migrated['keyManifest'][self::GROUP_META] ?? [];
+        $this->metaManifest = $this->validateMergeFullfillMetaManifest($rawMeta, $Migrated['tableManifest'][self::GROUP_META] ?? []);
         $this->metaManifestLive = $this->metaManifest;
 
         $this->updateLive(null, null, true, true);
+        unset($Migrated, $keyManifest);
     }
 
-    ##### Aktualisiert die Live‑Daten (Werte, Meta, Operatoren).
+    ##### Updates live data (values, meta, operators).
     protected function updateLive(?array $values = null, ?array $meta = null, bool $resetValues = true, bool $resetMeta = true): void
     {
-        //-- Werte aktualisieren
+        //-- Update values
         if ($values !== null) {
             if ($resetValues) {
                 $this->keyManifestLive = $this->keyManifest;
@@ -240,7 +255,7 @@ abstract class waveQlCore
             $this->updateValuesLive($values, !$resetValues);
         }
 
-        //-- OR‑Gruppe speziell behandeln
+        //-- OR group special handling
         if ($values !== null && isset($values[self::GROUP_OR]) && is_array($values[self::GROUP_OR])) {
             $conditions = $values[self::GROUP_OR];
             unset($conditions[self::GROUP_OR]);
@@ -252,7 +267,7 @@ abstract class waveQlCore
             unset($this->keyManifestLive[self::GROUP_OR]);
         }
 
-        //-- Meta aktualisieren
+        //-- Update meta
         if ($meta !== null) {
             if ($resetMeta) {
                 $this->metaManifestLive = $this->metaManifest;
@@ -260,11 +275,11 @@ abstract class waveQlCore
             $this->updateMetaLive($meta, !$resetMeta);
         }
 
-        //-- Operatoren neu parsen
+        //-- Re-parse operators
         $this->refreshOperators();
     }
 
-    ##### Überschreibt die Werte in keyManifestLive.
+    ##### Overwrites values in keyManifestLive.
     protected function updateValuesLive(array $keyValArr, bool $merge = false): void
     {
         foreach ($this->keyManifest as $key => $config) {
@@ -276,20 +291,19 @@ abstract class waveQlCore
         }
     }
 
-    ##### Überschreibt die Meta‑Werte und validiert die Paginierung.
+    ##### Overwrites meta values and validates pagination.
     protected function updateMetaLive(array $metaArr, bool $merge = true): void
     {
         if ($merge) {
-            $this->metaManifestLive = $this->metaManifest;
+            // New values overwrite live data, live data overwrite initial defaults
+            $this->metaManifestLive = $this->validateMergeFullfillMetaManifest($metaArr, $this->metaManifestLive, $this->metaManifest);
         } else {
-            $this->metaManifestLive = [];
+            // Reset: New values overwrite initial defaults
+            $this->metaManifestLive = $this->validateMergeFullfillMetaManifest($metaArr, $this->metaManifest);
         }
-
-        $metaArr = $this->validateMetaManifest($metaArr);
-        $this->metaManifestLive = $metaArr;
     }
 
-    ##### Füllt fehlende Meta‑Felder mit Defaults.
+    ##### Fills missing meta fields with defaults.
     protected function mergeAndFullfillMeta(array $prio1, array $prio2 = [], array $prio3 = []): array
     {
         $fields = ['sort', 'pageNumber', 'pageSize', 'firstElemNumber', 'sqlCondition', 'searchString', 'searchTarget'];
@@ -311,7 +325,7 @@ abstract class waveQlCore
         return $meta;
     }
 
-    ##### Validiert die Sortierangaben im Meta‑Manifest.
+    ##### Validates sorting information in the meta manifest.
     protected function validateMetaManifest_sort(string $sortValue = '', string $fallback = ''): string
     {
         $sortItems = [];
@@ -334,14 +348,14 @@ abstract class waveQlCore
         return $validSorts ? implode(',', $validSorts) : $fallback;
     }
 
-    ##### Validiert das gesamte Meta‑Manifest (Sortierung, Suche, Paginierung, SQL).
-    protected function validateMetaManifest(array $metaArr1 = [], array $metaArr2 = [], array $metaArr3 = []): array
+    ##### Validates the entire meta manifest (sorting, search, pagination, SQL).
+    protected function validateMergeFullfillMetaManifest(array $metaArr1 = [], array $metaArr2 = [], array $metaArr3 = []): array
     {
         $metaArr = $this->mergeAndFullfillMeta($metaArr1, $metaArr2, $metaArr3);
 
         $metaArr['sort'] = $this->validateMetaManifest_sort($metaArr['sort'] ?? '', $this->keyManifest[self::GROUP_META]['sort'] ?? '');
 
-        //-- Suchziele validieren
+        //-- Validate search targets
         $targetItems = [];
         if (is_string($metaArr['searchTarget']) && $metaArr['searchTarget'] !== '') {
             $targetItems = explode(',', $metaArr['searchTarget']);
@@ -362,10 +376,10 @@ abstract class waveQlCore
     }
 
 
-    ##### Berechnet firstElemNumber aus pageNumber und pageSize.
+    ##### Calculates firstElemNumber from pageNumber and pageSize.
     protected function validateMetaManifest_sqlCondition(array &$input): void
     {
-        //-- Sicherheitscheck für benutzerdefiniertes SQL
+        //-- Security check for custom SQL
         $sqlCondition = '';
         if (is_string($input['sqlCondition'])) {
             $sqlCondition = trim($input['sqlCondition']);
@@ -390,19 +404,21 @@ abstract class waveQlCore
     {
         $logicalNames = [];
         foreach ($this->keyManifest as $name => $config) {
-            if (strpos($name, '~') === 0) continue; // ~meta~, ~or~ überspringen
+            if ($name === self::GROUP_META || $name === self::GROUP_OR) {
+                continue;
+            }
             $logicalNames[] = $name;
         }
         if (empty($logicalNames)) return $sql;
 
-        // Nach Länge absteigend sortieren
+        // Sort descending by length
         usort($logicalNames, fn($a, $b) => strlen($b) - strlen($a));
 
         $replacements = [];
         foreach ($logicalNames as $name) {
             $detail = $this->getFieldDetail($name);
             if (!$detail || empty($detail['fullQuoted'])) continue;
-            $quotedFull = $detail['fullQuoted']; // z.B. `pr`.`extension`
+            $quotedFull = $detail['fullQuoted']; // e.g. `pr`.`extension`
             $pattern = '/\b' . preg_quote($name, '/') . '\b/i';
             $replacements[$pattern] = $quotedFull;
         }
@@ -412,7 +428,7 @@ abstract class waveQlCore
 
 
 
-    ##### Berechnet firstElemNumber aus pageNumber und pageSize.
+    ##### Calculates firstElemNumber from pageNumber and pageSize.
     protected function validateMetaManifest_pagination(array &$input): void
     {
         $pageSize = abs((int)($input['pageSize'] ?? 0));
@@ -431,7 +447,7 @@ abstract class waveQlCore
         }
     }
 
-    ##### Validiert ein einzelnes Tabellen‑Element (Haupttabelle oder Join).
+    ##### Validates a single table element (main table or join).
     protected function validateTableManifestElem(array $userInput = [], bool $join = false): array
     {
         $return = [];
@@ -442,20 +458,20 @@ abstract class waveQlCore
         foreach ($keys as $key) {
             if (!isset($userInput[$key]) or !is_string($userInput[$key])) {
                 if ($key === 'tableName') {
-                    throw new waveQlInvalidArgumentException("Fehlender oder ungültiger $key in tableManifest vorhanden");
+                    throw new waveQlInvalidArgumentException('Missing or invalid ' . $key . ' in tableManifest');
                 }
                 if ($join && in_array($key, ['connectColumn', 'connectWith'])) {
-                    throw new waveQlInvalidArgumentException("Leerer $key in tableManifest vorhanden");
+                    throw new waveQlInvalidArgumentException('Empty ' . $key . ' in tableManifest');
                 }
                 $value = null;
             } else {
                 $value = trim($userInput[$key]);
                 if (empty($value)) {
                     if ($key === 'tableName') {
-                        throw new waveQlInvalidArgumentException("Leerer $key in tableManifest vorhanden");
+                        throw new waveQlInvalidArgumentException('Empty ' . $key . ' in tableManifest');
                     }
                     if ($join && in_array($key, ['connectColumn', 'connectWith'])) {
-                        throw new waveQlInvalidArgumentException("Leerer $key in tableManifest vorhanden");
+                        throw new waveQlInvalidArgumentException('Empty ' . $key . ' in tableManifest');
                     }
                     $value = null;
                 }
@@ -465,7 +481,7 @@ abstract class waveQlCore
         return $return;
     }
 
-    ##### Validiert das gesamte tableManifest inklusive joinList.
+    ##### Validates the entire table manifest including joinList.
     protected function validateTableManifest(array $userInput = []): array
     {
         $joinList = $userInput['joinList'] ?? [];
@@ -481,7 +497,7 @@ abstract class waveQlCore
         return $return;
     }
 
-    ##### Validiert das keyManifest (Felddefinitionen).
+    ##### Validates the key manifest (field definitions).
     protected function validateKeyManifest(array $userInput = []): array
     {
         $return = [];
@@ -501,16 +517,16 @@ abstract class waveQlCore
             }
             $config['rowName'] = trim($config['rowName']);
             if ($config['rowName'] === null) {
-                throw new waveQlInvalidArgumentException("Leerer rowName in keyManifest vorhanden (Key: $i)");
+                throw new waveQlInvalidArgumentException('Empty rowName in keyManifest (Key: ' . $i . ')');
             }
             if (!preg_match('/^[a-zA-Z0-9_.()]+$/', $config['rowName'])) {
-                throw new waveQlInvalidArgumentException("Ungültiger rowName: {$config['rowName']}");
+                throw new waveQlInvalidArgumentException('Invalid rowName: ' . $config['rowName']);
             }
             if ($config['type'] === null) {
                 $config['type'] = self::TYPE_STRING;
             }
             if (!in_array($config['type'], self::ENTRY_TYPES)) {
-                error_log("waveQl: Ungültiger Typ bei {$config['rowName']}: {$config['type']}. Wird umgewandelt in String.");
+                error_log("waveQl: Invalid type for {$config['rowName']}: {$config['type']}. Converting to string.");
                 $config['type'] = self::TYPE_STRING;
             }
             if ($config['value'] === null) {
@@ -521,14 +537,14 @@ abstract class waveQlCore
         return $return;
     }
 
-    ##### Migriert alte Datenstrukturen (leftTableList, filter, mysql) auf die neuen Schlüssel.
+    ##### Migrates legacy data structures (leftTableList, filter, mysql) to new keys.
     protected function migrateLegacyData(array $userTM, array $userKM): array
     {
-        $tableName = $userTM['tableName'] ?? 'unbekannte Tabelle';
+        $tableName = $userTM['tableName'] ?? 'unknown table';
 
         //-- leftTableList → joinList
         if (isset($userTM['leftTableList']) && is_array($userTM['leftTableList']) && !isset($userTM['joinList'])) {
-            error_log("waveQl (Tabelle $tableName): leftTableList ist veraltet, verwende joinList. Bitte aktualisieren.");
+            error_log("waveQl (table $tableName): leftTableList is deprecated, use joinList. Please update.");
             $joinList = [];
             foreach ($userTM['leftTableList'] as $join) {
                 $join['type'] = $join['type'] ?? 'LEFT';
@@ -538,26 +554,26 @@ abstract class waveQlCore
             unset($userTM['leftTableList']);
         }
 
-        //-- Migration für keyManifest: filter → ~meta~
+        //-- Migration for keyManifest: filter → ~meta~
         $oldMetas = ['filter', '~filter~'];
         foreach ($oldMetas as $oMeta) {
             if (isset($userKM[$oMeta])) {
                 if (isset($userKM[self::GROUP_META])) {
-                    error_log("waveQl (Tabelle $tableName): keyManifest enthält bereits '" . self::GROUP_META . "'. keyManifest['$oMeta'] wird ignoriert, bitte nur '" . self::GROUP_META . "' verwenden.");
+                    error_log("waveQl (table $tableName): keyManifest already contains '" . self::GROUP_META . "'. keyManifest['$oMeta'] will be ignored, please use only '" . self::GROUP_META . "'.");
                     $userKM[self::GROUP_META] = $userKM[$oMeta];
                     unset($userKM[$oMeta]);
                 } else {
-                    error_log("waveQl (Tabelle $tableName): keyManifest['$oMeta'] ist veraltet, verwende '" . self::GROUP_META . "'.");
+                    error_log("waveQl (table $tableName): keyManifest['$oMeta'] is deprecated, use '" . self::GROUP_META . "'.");
                     $userKM[self::GROUP_META] = $userKM[$oMeta];
                     unset($userKM[$oMeta]);
                 }
             }
-            //-- mysql → sqlCondition im ~meta~-Block
+            //-- mysql → sqlCondition inside ~meta~ block
             if (isset($userKM[self::GROUP_META]) && is_array($userKM[self::GROUP_META])) {
                 if (array_key_exists('mysql', $userKM[self::GROUP_META]) && !array_key_exists('sqlCondition', $userKM[self::GROUP_META])) {
                     $userKM[self::GROUP_META]['sqlCondition'] = $userKM[self::GROUP_META]['mysql'];
                     unset($userKM[self::GROUP_META]['mysql']);
-                    error_log("waveQl (Tabelle $tableName): In keyManifest['" . self::GROUP_META . "'] wurde 'mysql' in 'sqlCondition' umbenannt.");
+                    error_log("waveQl (table $tableName): In keyManifest['" . self::GROUP_META . "'] 'mysql' was renamed to 'sqlCondition'.");
                 }
             }
         }
@@ -567,7 +583,7 @@ abstract class waveQlCore
         ];
     }
 
-    ##### Erzeugt virtuelle Felder für Datum/Zeit (z. B. feldYEAR).
+    ##### Generates virtual fields for date/time (e.g. fieldYEAR).
     protected function generateAutoFields(string $key, array $config): array
     {
         if (!in_array($config['type'], self::DATETIME_TYPES)) return [];
@@ -599,21 +615,21 @@ abstract class waveQlCore
         return $auto;
     }
 
-    ########################### HILFSMETHODEN
+    ########################### HELPER METHODS
 
-    ##### Quotiert einen Identifier (Tabellen‑/Spaltenname) mit Backticks, außer bei Funktionen.
+    ##### Quotes an identifier (table/column name) with backticks, except for functions.
     protected function quoteMe(string $name, bool $splitDot = false): string
     {
         return $this->db->quoteIdentifier($name, $splitDot);
     }
 
-    ##### Liefert die joinList (oder leeres Array).
+    ##### Returns the joinList (or empty array).
     protected function getJoinList(): array
     {
         return $this->tableManifest['joinList'] ?? [];
     }
 
-    ##### Baut die JOIN‑Klausel aus der joinList.
+    ##### Builds the JOIN clause from the joinList.
     protected function getJoinQuery(string $defaultType = 'LEFT'): string|false
     {
         $joinList = $this->getJoinList();
@@ -636,7 +652,7 @@ abstract class waveQlCore
         return implode(PHP_EOL, $joins);
     }
 
-    ##### Liefert den FROM‑Teil (Tabelle + Alias).
+    ##### Returns the FROM part (table + alias).
     protected function getTableQuery(): string|false
     {
         $detail = $this->getTableDetail($this->tableManifest['tableName'] ?? '');
@@ -647,9 +663,9 @@ abstract class waveQlCore
         return $detail['nameQuoted'];
     }
 
-    ########################### DETAIL-METHODEN
+    ########################### DETAIL METHODS
 
-    ##### Liefert ein Detail-Array für einen Namen mit optionalem Alias.
+    ##### Returns a detail array for a name with optional alias.
     protected function getElemDetail(string $name, ?string $alias = null): array
     {
         $nameQuoted = $this->quoteMe($name);
@@ -666,20 +682,20 @@ abstract class waveQlCore
         ];
     }
 
-    ##### Liefert die Bestandteile einer Tabelle anhand ihres Namens oder Alias.
+    ##### Returns the components of a table by its name or alias.
     protected function getTableDetail(string $name): array|false
     {
         $search = trim($name);
         if ($search === '') return false;
 
-        //-- Haupttabelle prüfen
+        //-- Check main table
         $mainTable = $this->tableManifest['tableName'] ?? '';
         $mainAlias = $this->tableManifest['tableKey'] ?? '';
         if ($search === $mainTable || $search === $mainAlias) {
             return $this->getElemDetail($mainTable, $mainAlias);
         }
 
-        //-- Joins durchsuchen
+        //-- Search joins
         foreach ($this->getJoinList() as $join) {
             $joinTable = $join['tableName'] ?? '';
             $joinAlias = $join['tableKey'] ?? '';
@@ -690,7 +706,7 @@ abstract class waveQlCore
         return false;
     }
 
-    ##### Liefert die Bestandteile eines Feldes anhand seines logischen Schlüssels.
+    ##### Returns the components of a field by its logical key.
     protected function getFieldDetail(string $logicalName): array|false
     {
         if (!isset($this->keyManifest[$logicalName]) || !is_array($this->keyManifest[$logicalName])) {
@@ -704,25 +720,25 @@ abstract class waveQlCore
         return $this->getElemDetail($column, $alias);
     }
 
-    ########################### WEITERE HILFSMETHODEN
+    ########################### FURTHER HELPER METHODS
 
-    ##### Fügt einen Parameter für Prepared Statements hinzu.
+    ##### Adds a parameter for prepared statements.
     protected function addParam(string|int|float $value, string $type): void
     {
         $this->preparedParams[] = $value;
         $this->preparedTypes .= $type;
     }
 
-    ##### Escaped % und _ für LIKE‑Abfragen.
+    ##### Escapes % and _ for LIKE queries.
     protected function getEscapedLikeString(string $string): string
     {
         return str_replace(['%', '_'], ['\%', '\_'], $string);
     }
 
-    ##### Prüft, ob ein benutzerdefinierter SQL‑Ausdruck sicher ist.
+    ##### Checks whether a custom SQL expression is safe.
     protected function isSqlConditionSafe(string $sql): void
     {
-        //-- Kommentare entfernen
+        //-- Remove comments
         while (preg_match('/\/\*.*?\*\//s', $sql)) {
             $sql = preg_replace('/\/\*.*?\*\//s', '', $sql);
         }
@@ -741,7 +757,7 @@ abstract class waveQlCore
         }
     }
 
-    ##### Wandelt einen Operator‑Kürzel in SQL um.
+    ##### Converts an operator shortcut to SQL.
     protected function operatorToSql(string $op): string
     {
         $map = [
@@ -755,36 +771,17 @@ abstract class waveQlCore
         return $map[$op] ?? '=';
     }
 
-    ##### Ermittelt den Bind‑Typ für Prepared Statements anhand des Feldtyps.
+    ##### Returns the bind type for prepared statements based on field type.
     protected function typeToBindParam(string $type): string
     {
         if ($type === self::TYPE_FLOAT) return 'd';
         return in_array($type, self::NUMERIC_TYPES) ? 'i' : 's';
     }
 
-    ########################### ÖFFENTLICHE GETTER (DEBUGGING)
 
-    public function getResolvedData(): array
-    {
-        return $this->keyManifestLive;
-    }
 
-    public function getWinData(): array
-    {
-        return $this->keyManifestLive;
-    }
 
-    public function getFieldDefinitions(): array
-    {
-        return $this->keyManifest;
-    }
-
-    public function getSkeletalData(): array
-    {
-        return $this->keyManifest;
-    }
-
-    ########################### MANIFEST-GETTER (EPIC 4)
+    ########################### MANIFEST GETTERS (EPIC 4)
 
     public function getManifest(string $type, string $status = 'live'): array
     {
@@ -799,28 +796,28 @@ abstract class waveQlCore
                     'initial' => $this->keyManifest,
                     'live'    => $this->keyManifestLive,
                     'liveOp'  => $this->keyManifestLiveOp,
-                    default   => throw new waveQlInvalidArgumentException("Ungültiger Status '$status' für key-Manifest."),
+                    default   => throw new waveQlInvalidArgumentException("Invalid status '$status' for key manifest."),
                 };
             case 'meta':
                 return match ($status) {
                     'initial' => $this->metaManifest,
                     'live', 'liveOp' => $this->metaManifestLive,
-                    default   => throw new waveQlInvalidArgumentException("Ungültiger Status '$status' für meta-Manifest."),
+                    default   => throw new waveQlInvalidArgumentException("Invalid status '$status' for meta manifest."),
                 };
             default:
-                throw new waveQlInvalidArgumentException("Ungültiger Manifest-Typ '$type'. Erlaubt: 'table', 'key', 'meta'.");
+                throw new waveQlInvalidArgumentException("Invalid manifest type '$type'. Allowed: 'table', 'key', 'meta'.");
         }
-        throw new waveQlInvalidArgumentException("Für Typ '$type' ist Status '$status' nicht verfügbar.");
+        throw new waveQlInvalidArgumentException("For type '$type' status '$status' is not available.");
     }
 
-    ########################### AKTUALISIERUNG DER OPERATOREN (EPIC 4)
+    ########################### OPERATOR REFRESH (EPIC 4)
 
     protected function refreshOperators(): void
     {
-        // Wird in waveQlRead implementiert
+        // Will be implemented in waveQlRead
     }
 
-    ########################### ABSTRAKTE METHODEN
+    ########################### ABSTRACT METHODS
 
     abstract public function setMeta(array $meta);
     abstract public function setValues(array $values);

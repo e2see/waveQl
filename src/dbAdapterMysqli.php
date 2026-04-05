@@ -5,15 +5,14 @@ namespace e2;
 
 /**
  * =================================================================================================
- * dbAdapterMysqli – Konkrete Implementierung des Adapters für die mysqli‑Erweiterung
+ * dbAdapterMysqli – Concrete implementation of the adapter for the mysqli extension
  * =================================================================================================
  *
- * Dieser Adapter kapselt alle mysqli‑spezifischen Aufrufe und setzt das waveQlDbInterface um.
- * Er wird von der Factory (waveQl::create()) automatisch erzeugt, wenn eine mysqli‑Instanz
- * übergeben wird.
+ * This adapter encapsulates all mysqli‑specific calls and implements the waveQlDbInterface.
+ * It is automatically created by the factory (waveQl::create()) when a mysqli instance is passed.
  *
  * -------------------------------------------------------------------------------------------------
- * Verwendung:
+ * Usage:
  *   $mysqli  = new mysqli('localhost', 'user', 'pass', 'db');
  *   $adapter = new dbAdapterMysqli($mysqli);
  *   $result  = $adapter->query('SELECT * FROM users');
@@ -26,53 +25,53 @@ class dbAdapterMysqli implements waveQlDbInterface
 {
     private \mysqli $db;
 
-    ########################### KONSTRUKTOR
+    ########################### CONSTRUCTOR
 
     public function __construct(\mysqli $db)
     {
         $this->db = $db;
     }
 
-    ########################### QUERY-AUSFÜHRUNG
+    ########################### QUERY EXECUTION
 
-    ##### Führt eine Query direkt aus.
+    ##### Executes a query directly.
     public function query(string $sql): mixed
     {
         $result = $this->db->query($sql);
         if ($result === false) {
-            throw new waveQlQueryException('Query fehlgeschlagen: ' . $this->db->error);
+            throw new waveQlQueryException('Query failed: ' . $this->db->error);
         }
         return $result;
     }
 
-    ##### Bereitet eine SQL-Anweisung vor.
+    ##### Prepares an SQL statement.
     public function prepare(string $sql): mixed
     {
         $stmt = $this->db->prepare($sql);
         if ($stmt === false) {
-            throw new waveQlQueryException('Prepare fehlgeschlagen: ' . $this->db->error);
+            throw new waveQlQueryException('Prepare failed: ' . $this->db->error);
         }
         return $stmt;
     }
 
-    ##### Führt ein vorbereitetes Statement aus.
+    ##### Executes a prepared statement.
     public function execute(mixed $stmt, array $params, string $types): bool
     {
         if (!($stmt instanceof \mysqli_stmt)) {
             throw new waveQlInvalidArgumentException('Statement must be mysqli_stmt');
         }
-        //-- Parameter binden, falls vorhanden
+        //-- Bind parameters if any
         if (!empty($params)) {
             $stmt->bind_param($types, ...$params);
         }
         $success = $stmt->execute();
         if (!$success) {
-            throw new waveQlQueryException('Execute fehlgeschlagen: ' . $stmt->error);
+            throw new waveQlQueryException('Execute failed: ' . $stmt->error);
         }
         return $success;
     }
 
-    ########################### HILFSMETHODEN
+    ########################### HELPER METHODS
 
     public function escape(string $value): string
     {
@@ -89,7 +88,7 @@ class dbAdapterMysqli implements waveQlDbInterface
         return $this->db->affected_rows;
     }
 
-    ##### Holt alle Zeilen eines Ergebnisses.
+    ##### Fetches all rows of a result.
     public function fetchAll(mixed $result): array
     {
         if ($result instanceof \mysqli_result) {
@@ -109,7 +108,7 @@ class dbAdapterMysqli implements waveQlDbInterface
         return $this->db->error;
     }
 
-    ##### Prüft, ob ein vorbereitetes Statement ein Resultset liefert.
+    ##### Checks whether a prepared statement returns a result set.
     public function isResultSet(mixed $stmt): bool
     {
         if (!($stmt instanceof \mysqli_stmt)) {
@@ -118,18 +117,18 @@ class dbAdapterMysqli implements waveQlDbInterface
         return (bool) $stmt->result_metadata();
     }
 
-    ##### Quotiert einen Identifier für MySQL (Backticks) und splittet bei Punkt.
+    ##### Quotes an identifier for MySQL (backticks) and splits at dot.
     public function quoteIdentifier(string $name, bool $splitDot = false): string
     {
         $name = trim($name);
         if ($name === '') return '';
 
-        //-- Funktionsaufrufe (enthalten Klammern) nicht quoten
+        //-- Function calls (contain parentheses) are not quoted
         if (strpos($name, '(') !== false && strpos($name, ')') !== false) {
             return $name;
         }
 
-        //-- Punkt‑Notation einzeln quoten
+        //-- Dot notation quote each part
         if ($splitDot || strpos($name, '.') !== false) {
             $parts = explode('.', $name);
             $quoted = [];
@@ -142,7 +141,7 @@ class dbAdapterMysqli implements waveQlDbInterface
             return implode('.', $quoted);
         }
 
-        //-- Einfacher Bezeichner
+        //-- Simple identifier
         return '`' . $name . '`';
     }
 }

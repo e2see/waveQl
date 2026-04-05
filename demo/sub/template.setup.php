@@ -30,15 +30,18 @@
         </div>
     <?php elseif (!$tableExists): ?>
         <div class="config-details">
-            <p>Connection to database <strong><?= htmlspecialchars($maskedDb) ?></strong> successful.</p>
-            <p>However, the <code>countries</code> table is missing.</p>
+            <p>✅ Connection to database <strong><?= htmlspecialchars($maskedDb) ?></strong> successful.</p>
+            <p>⚠️ However, the table <code>countries</code> is missing.</p>
+            <p>You can initialise the database automatically – the SQL script from <code>demo/setup.sql</code> will be executed.</p>
             <?php if ($allowInitSQL): ?>
                 <form method="get" action="">
                     <input type="hidden" name="initSQL" value="1">
-                    <button type="submit">📦 Automatically initialise database (run setup.sql)</button>
+                    <button type="submit" style="background: #2ecc71; color: white; border: none; padding: 0.6rem 1.2rem; font-weight: bold;">🚀 Run setup.sql now</button>
                 </form>
+                <p style="margin-top: 1rem;"><small>Alternatively, you can execute the file <code>demo/setup.sql</code> manually in your database tool.</small></p>
             <?php else: ?>
-                <p>Automatic initialisation is disabled in the configuration. Please run <code>setup.sql</code> manually.</p>
+                <p>❌ Automatic initialisation is disabled in the configuration (<code>$allowInitSQL = false;</code>).</p>
+                <p>Please run <code>demo/setup.sql</code> manually in your database tool (e.g. phpMyAdmin, Adminer, or MySQL command line).</p>
             <?php endif; ?>
         </div>
     <?php endif; ?>
