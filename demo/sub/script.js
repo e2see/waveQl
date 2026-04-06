@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         }, 3000);
     });
 
-    const virtualCheckbox = document.querySelector('input[name="opt_virtualDateFields"]');
+    const virtualCheckbox = document.querySelector('input[name="options[virtualDateFields]"]');
     const dateGroups = document.querySelectorAll('.date-field-group');
 
     function updateCheckboxValue(group) {
@@ -152,13 +152,8 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (disabled) {
                 select.disabled = true;
                 select.value = 'Original';
-                if (checkbox) {
-                   // checkbox.disabled = true;
-                    //checkbox.checked = false;
-                }
             } else {
                 select.disabled = false;
-                if (checkbox) checkbox.disabled = false;
             }
             updateCheckboxValue(group);
         });
@@ -193,4 +188,103 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
     enforceRadioState();
+
+    // Fade-Effekt für Presets-Scroll
+    const presetsWrapper = document.querySelector('.presets-scroll-wrapper');
+    const presetsScroll = document.querySelector('.presets-scroll');
+    if (presetsWrapper && presetsScroll) {
+        function checkOverflow() {
+            if (presetsScroll.scrollWidth > presetsScroll.clientWidth) {
+                presetsWrapper.classList.add('has-overflow');
+            } else {
+                presetsWrapper.classList.remove('has-overflow');
+            }
+        }
+        checkOverflow();
+        window.addEventListener('resize', checkOverflow);
+        const observer = new ResizeObserver(checkOverflow);
+        observer.observe(presetsScroll);
+    }
+
+    // Collapse für erste zwei Boxen
+    const collapsibleCards = document.querySelectorAll('.dashboard-card.collapsible');
+    collapsibleCards.forEach(card => {
+        const header = card.querySelector('.card-header');
+        const toggleBtn = header?.querySelector('.toggle-btn');
+        if (!header) return;
+
+        function toggleCollapse(e) {
+            e.stopPropagation();
+            card.classList.toggle('open');
+            if (toggleBtn) {
+                toggleBtn.textContent = card.classList.contains('open') ? '▲' : '▼';
+            }
+        }
+
+        header.addEventListener('click', toggleCollapse);
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', toggleCollapse);
+        }
+    });
+
+    // ========== Dynamisches Disabled je nach Modus (Read/Write) ==========
+    function toggleFilterFields() {
+        const modeRead = document.querySelector('input[name="mode"][value="read"]').checked;
+
+        // 1. Meta-Felder (Sortierung, Paginierung, Custom SQL) – nur Read
+        document.querySelectorAll('.dashboard-card .meta-input').forEach(input => {
+            modeRead ? input.removeAttribute('disabled') : input.setAttribute('disabled', 'disabled');
+        });
+
+        // 2. Fremdschlüssel-Feld (z.B. ContinentId) – nur Write
+        const foreignInput = document.querySelector(`input[name="${foreignKeyField}"]`);
+        if (foreignInput) {
+            if (!modeRead) {
+                foreignInput.removeAttribute('disabled');
+            } else {
+                foreignInput.setAttribute('disabled', 'disabled');
+            }
+        }
+
+        // 3. Datumsfelder: Input-Feld immer aktiv, Select nur bei Read
+        document.querySelectorAll('.date-field-group').forEach(group => {
+            const dateInput = group.querySelector('.date-input');
+            const funcSelect = group.querySelector('.date-select-right');
+            if (modeRead) {
+                if (dateInput) dateInput.removeAttribute('disabled');
+                if (funcSelect) funcSelect.removeAttribute('disabled');
+            } else {
+                if (dateInput) dateInput.removeAttribute('disabled');
+                if (funcSelect) funcSelect.setAttribute('disabled', 'disabled');
+            }
+        });
+
+        // 4. Fulltext-Suche und deren Checkboxen – nur Read
+        const fulltextRow = document.querySelector('.fulltext-row');
+        if (fulltextRow) {
+            const ftInput = fulltextRow.querySelector('input');
+            if (modeRead) ftInput.removeAttribute('disabled');
+            else ftInput.setAttribute('disabled', 'disabled');
+        }
+        document.querySelectorAll('input[name="fulltext_fields[]"]').forEach(cb => {
+            modeRead ? cb.removeAttribute('disabled') : cb.setAttribute('disabled', 'disabled');
+        });
+
+        // 5. Write-Felder (aus writeFieldNames) immer aktiv im Write-Modus, im Read deaktiviert
+        writeFieldNames.forEach(fieldName => {
+            const inp = document.querySelector(`input[name="${fieldName}"]`);
+            if (inp) {
+                if (!modeRead) {
+                    inp.removeAttribute('disabled');
+                } else {
+                    inp.setAttribute('disabled', 'disabled');
+                }
+            }
+        });
+    }
+
+    toggleFilterFields();
+    document.querySelectorAll('input[name="mode"]').forEach(radio => {
+        radio.addEventListener('change', toggleFilterFields);
+    });
 });

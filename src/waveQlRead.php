@@ -46,6 +46,7 @@ class waveQlRead extends waveQlCore
     ##### Sets meta information (sorting, pagination, search, custom SQL).
     public function setMeta(array $meta): self
     {
+        ksort($meta);
         $this->updateLive(null, $meta, false, true);
         return $this;
     }
@@ -53,6 +54,7 @@ class waveQlRead extends waveQlCore
     ##### Sets the search values (with optional operators).
     public function setValues(array $values): self
     {
+        ksort($values);
         $this->updateLive($values, null, true, false);
         return $this;
     }

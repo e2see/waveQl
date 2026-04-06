@@ -21,7 +21,7 @@ $dbname = 'waveql_test';
 
 // ----- Security settings for demo mode -----
 $allowRead    = true;   // Read mode (SELECT) allowed
-$allowWrite   = false;  // Write mode (INSERT/UPDATE/DELETE) allowed
+$allowWrite   = true;  // Write mode (INSERT/UPDATE/DELETE) allowed
 $allowInitSQL = true;  // Automatic table initialisation via ?initSQL=1 allowed
 
 $mysqli            = null;

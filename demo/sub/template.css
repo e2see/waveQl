@@ -1,0 +1,155 @@
+/* ============================================================
+   waveQl Demo – Template (Mobile First + Desktop-Überschreibungen)
+   ============================================================ */
+
+/* ----- Mobile Standard (alle Geräte) ----- */
+.dashboard-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.dashboard-card {
+    width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-bg-card);
+    box-shadow: var(--shadow-default);
+    overflow: auto;
+}
+
+.result-card {
+    width: 100%;
+    margin-bottom: var(--spacing-2xl);
+}
+
+.card-header {
+    font-weight: 600;
+    font-size: var(--spacing-lg);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    margin: 0;
+    color: var(--color-primary);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.card-body {
+    padding: 1.2rem var(--spacing-xl);
+}
+
+.result-card .card-body {
+    padding: 0;
+}
+
+.result-content {
+    max-height: 500px;
+    overflow: auto;
+}
+
+.presets-scroll-wrapper {
+    position: relative;
+    margin: var(--spacing-xl) 0;
+}
+.presets-scroll {
+    display: flex;
+    overflow-x: auto;
+    gap: 0.8rem;
+    padding-bottom: var(--spacing-sm);
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+.presets-scroll button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+.presets-scroll-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 40px;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(to left, var(--color-bg-body), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.presets-scroll-wrapper.has-overflow::after {
+    opacity: 1;
+}
+
+/* Collapsible: auf Mobil standardmäßig zugeklappt */
+.dashboard-card.collapsible .card-body {
+    display: none;
+}
+.dashboard-card.collapsible.open .card-body {
+    display: block;
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    margin-left: auto;
+    padding: 0 var(--spacing-sm);
+    color: var(--color-primary);
+    box-shadow: none;
+}
+.toggle-btn:hover {
+    background: none;
+    transform: scale(1.4);
+    box-shadow: none;
+}
+
+/* Normale Buttons im Formular komplett ausblenden */
+.form-row .action-buttons-normal {
+    display: none;
+}
+
+/* Fixierte Buttons – immer unten zentriert schwebend */
+.action-buttons-fixed {
+    display: flex !important;  /* Garantiert Sichtbarkeit */
+    position: fixed;
+    bottom: 3vh;
+    left: 50%;
+    transform: translateX(-50%);
+    gap: 4px;
+    border-radius: 16px;
+    z-index: 1100;
+    box-shadow: 0 0px 20px 20px var(--color-bg-body);
+    background: var(--color-bg-body);
+
+}
+
+.action-buttons-fixed button {
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.6rem 1.8rem;
+    margin: 0;
+    background: #2c3e50;
+    color: white;
+    border: none;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.action-buttons-fixed button:hover {
+    background: #1e2b38;
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+@media (max-width: 480px) {
+    .action-buttons-fixed button {
+        padding: 0.5rem 1.2rem;
+        font-size: 0.9rem;
+    }
+}

@@ -1,0 +1,28 @@
+@media (min-width: 880px) {
+    body {
+        padding: 40px;
+    }
+
+    .dashboard-row {
+        flex-direction: row;
+    }
+
+    .dashboard-card {
+        flex: 1;
+        width: auto;
+    }
+
+    .result-card {
+        width: auto;
+    }
+
+    .dashboard-card.collapsible .card-body {
+        display: block !important;
+    }
+
+    .toggle-btn {
+        display: none;
+    }
+
+    /* Fixierte Buttons bleiben sichtbar – kein display: none */
+}

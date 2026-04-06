@@ -1,0 +1,233 @@
+/* ============================================================
+   waveQl Demo – Core (Basiselemente & Animationen)
+   ============================================================ */
+
+/* ---------- CSS VARIABLES (30 Stück, kategorisiert) ---------- */
+:root {
+    /* ===== Breakpoint (Dokumentation) ===== */
+    /* Desktop-Breakpoint: 800px – Media Query siehe template.css */
+
+    /* ===== Farben – Grundlegend ===== */
+    --color-primary: #2c3e50;
+    --color-primary-light: #4a627a;
+    --color-text-body: #333;
+    --color-bg-body: #f9f9f9;
+    --color-bg-card: white;
+    --color-bg-code: #f4f6f9;
+
+    /* ===== Farben – Rahmen & Trennlinien ===== */
+    --color-border: #e0e4e8;
+    --color-border-input: #cfdfed;
+    --color-border-table: #e2e8f0;
+    --color-border-button: #cbdbe0;
+
+    /* ===== Farben – Buttons & Interaktion ===== */
+    --color-button-bg: #f0f4fa;
+    --color-button-hover-bg: #cfe5ff;
+    --color-button-hover-border: #bdc4cc;
+    --color-preset-bg: #eef2f7;
+    --color-preset-border: #cfdde6;
+
+    /* ===== Farben – Tabellen ===== */
+    --color-table-header-bg: #f1f5f9;
+    --color-table-header-text: #1e4668;
+    --color-table-row-even: #fafcff;
+    --color-table-row-hover: #f8fafd;
+
+    /* ===== Farben – Statusmeldungen ===== */
+    --color-success-bg: #e0f2e9;
+    --color-success-border: #2ecc71;
+    --color-success-text: #1e6f3f;
+    --color-error-bg: #fde8e8;
+    --color-error-border: #e74c3c;
+    --color-error-text: #b33c2e;
+    --color-warning-bg: #fff3e0;
+    --color-warning-border: #f39c12;
+    --color-warning-text: #a25e00;
+
+    /* ===== Schatten ===== */
+    --shadow-default: 5px 5px 10px rgba(0,0,0,.06);
+    --shadow-hover: 3px 3px 5px rgba(0,0,0,.1);
+
+    /* ===== Radien ===== */
+    --radius-card: 16px;
+    --radius-button: 30px;
+    --radius-input: 6px;
+    --radius-code: 8px;
+
+    /* ===== Abstände ===== */
+    --spacing-xs: 0.3rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 0.75rem;
+    --spacing-lg: 1rem;
+    --spacing-xl: 1.5rem;
+    --spacing-2xl: 2rem;
+
+    /* ===== Schriftgrößen ===== */
+    --font-size-base: 0.85rem;
+    --font-size-small: 0.75rem;
+    --font-size-h1: 1.8rem;
+    --font-size-button: 0.9rem;
+    --font-size-code: 0.8rem;
+}
+
+/* ---------- Basis-Regeln (Mobile First) ---------- */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--color-bg-body);
+    margin: 0;
+    padding: 20px;
+    color: var(--color-text-body);
+}
+
+h1 {
+    font-size: var(--font-size-h1);
+    font-weight: 500;
+    margin-bottom: var(--spacing-sm);
+    color: var(--color-primary);
+}
+
+/* Logo & Animationen (unverändert) */
+.logo-container {
+    position: fixed;
+    bottom: 15px;
+    right: 20px;
+    perspective: 140px;
+    width: 100px;
+    height: auto;
+    z-index: 1000;
+}
+
+#logo {
+    display: block;
+    width: 100%;
+    transition: opacity 0.3s ease;
+    transform-origin: center center;
+    animation: flipOver 7s ease-in-out infinite;
+    animation-delay: -4s;
+}
+
+#logo.logo-hidden {
+    opacity: 0.2;
+    pointer-events: none;
+    animation: none;
+}
+
+@keyframes flipOver {
+    0%   { transform: rotateX(0deg); }
+    80%  { transform: rotateX(0deg); }
+    95%  { transform: rotateX(400deg); }
+    100% { transform: rotateX(360deg); }
+}
+
+@keyframes blinkBorder {
+    0% { box-shadow: 0 0 0 0 #eec247; }
+    50% { box-shadow: 0 0 4px 4px #eec247; }
+    100% { box-shadow: 0 0 0 0 #eec247; }
+}
+
+.blink-box {
+    animation: blinkBorder 0.5s ease-in-out 3;
+    box-shadow: 0 0 0 2px #3498db;
+    border-radius: 12px;
+}
+
+select:disabled,
+input:disabled,
+.disabled-element {
+    opacity: 0.3;
+    filter: grayscale(100%);
+    pointer-events: none;
+    cursor: not-allowed;
+    transition: all 200ms;
+    box-shadow: none;
+}
+
+.message {
+    padding: 0.8rem var(--spacing-lg);
+    border-radius: var(--radius-code);
+    margin: var(--spacing-lg) 0;
+    font-weight: 500;
+    box-shadow: var(--shadow-default);
+}
+
+.success {
+    background: var(--color-success-bg);
+    border-left: 5px solid var(--color-success-border);
+    color: var(--color-success-text);
+}
+
+.error {
+    background: var(--color-error-bg);
+    border-left: 5px solid var(--color-error-border);
+    color: var(--color-error-text);
+}
+
+.warning {
+    background: var(--color-warning-bg);
+    border-left: 5px solid var(--color-warning-border);
+    color: var(--color-warning-text);
+}
+
+button {
+    background: var(--color-button-bg);
+    border: 1px solid var(--color-border-button);
+    border-radius: var(--radius-button);
+    padding: 0.4rem var(--spacing-lg);
+    font-size: var(--font-size-button);
+    cursor: pointer;
+    margin-right: var(--spacing-sm);
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-default);
+}
+
+button:hover {
+    background: var(--color-button-hover-bg);
+    border-color: var(--color-button-hover-border);
+    box-shadow: var(--shadow-hover);
+}
+
+.code-block, .sql-content {
+    background: var(--color-bg-code);
+    padding: 0.8rem;
+    border-radius: var(--radius-code);
+    font-family: 'Courier New', monospace;
+    font-size: var(--font-size-code);
+    overflow-x: auto;
+    max-height: 400px;
+    white-space: pre-wrap;
+    margin: 0;
+}
+
+.result-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-base);
+}
+
+.result-table th, .result-table td {
+    border: 1px solid var(--color-border-table);
+    padding: 0.6rem 0.8rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+.result-table th {
+    background: var(--color-table-header-bg);
+    font-weight: 600;
+    color: var(--color-table-header-text);
+}
+
+.result-table tr:nth-child(even) {
+    background: var(--color-table-row-even);
+}
+
+.result-table tr:hover {
+    background: var(--color-table-row-hover);
+}
+
+input::placeholder, select::placeholder {
+    color: #bcbcbc;
+    font-style: italic;
+    font-size: var(--font-size-small);
+}

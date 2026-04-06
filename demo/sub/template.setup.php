@@ -5,7 +5,10 @@
     <meta charset="utf-8">
     <title>waveQl – Setup</title>
     <link rel="icon" type="image/png" href="../images/logo-xs.png" />
-    <link rel="stylesheet" href="sub/style.css">
+    <link rel="stylesheet" href="sub/core.css">
+    <link rel="stylesheet" href="sub/template.css">
+    <link rel="stylesheet" href="sub/components.css">
+    <link rel="stylesheet" href="sub/desktop.css">
 </head>
 
 <body>

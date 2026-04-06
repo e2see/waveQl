@@ -1,0 +1,145 @@
+/* ============================================================
+   waveQl Demo – Components (Inputs, Filter, Checkboxen, etc.)
+   ============================================================ */
+
+.presets button {
+    background: var(--color-preset-bg);
+    border: 1px solid var(--color-preset-border);
+    border-radius: var(--radius-button);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: var(--font-size-button);
+    font-weight: 500;
+    color: var(--color-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-default);
+}
+.presets button:hover {
+    background: var(--color-button-hover-bg);
+    border-color: var(--color-button-hover-border);
+    box-shadow: var(--shadow-hover);
+}
+
+.compact-fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+.compact-fieldset legend {
+    font-weight: 600;
+    font-size: var(--font-size-button);
+    margin-bottom: var(--spacing-md);
+    color: var(--color-primary);
+}
+
+.form-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    flex-wrap: wrap;
+}
+.form-row > label,
+.filter-label,
+.date-label,
+.meta-label {
+    width: 120px;
+    flex-shrink: 0;
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    color: var(--color-primary-light);
+}
+
+.form-row input:not([type="checkbox"]):not([type="radio"]),
+.form-row select,
+.filter-input,
+.date-input,
+.meta-input {
+    flex: 1;
+    min-width: 150px;
+    padding: 0.45rem 0.6rem;
+    border-radius: var(--radius-input);
+    border: 1px solid var(--color-border-input);
+    font-size: var(--font-size-base);
+    background: var(--color-bg-card);
+    box-shadow: 1px 1px 3px rgba(0,0,0,.06);
+}
+.date-select-right {
+    width: 130px;
+    flex-shrink: 0;
+    padding: 0.45rem 0.6rem;
+    border-radius: var(--radius-input);
+    border: 1px solid var(--color-border-input);
+    font-size: var(--font-size-base);
+    background: var(--color-bg-card);
+}
+
+.filter-checkbox {
+    width: auto;
+    flex-shrink: 0;
+    margin-left: auto;
+    transform: scale(1.1);
+    cursor: pointer;
+}
+.date-fulltext-checkbox {
+    width: auto;
+    flex-shrink: 0;
+    transform: scale(1.1);
+    cursor: pointer;
+    margin-left: 0.25rem;
+}
+
+.radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-lg);
+    align-items: center;
+}
+.radio-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-weight: normal;
+    font-size: var(--font-size-base);
+    cursor: pointer;
+}
+.radio-label input[type="radio"] {
+    width: auto;
+    margin: 0;
+}
+
+.checkbox-group-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-weight: normal;
+    font-size: var(--font-size-base);
+    cursor: pointer;
+}
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.fulltext-row {
+    margin-top: var(--spacing-md);
+}
+.fulltext-label {
+    width: 120px;
+    flex-shrink: 0;
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    color: var(--color-primary-light);
+}
+.fulltext-input {
+    flex: 1;
+    padding: 0.45rem 0.6rem;
+    border-radius: var(--radius-input);
+    border: 1px solid var(--color-border-input);
+    font-size: var(--font-size-base);
+}

@@ -204,9 +204,15 @@ abstract class waveQlCore
 
     public function __construct(waveQlDbInterface $db, array $tableManifest, array $keyManifest, array $options = [])
     {
+
+        ksort($tableManifest);
+        ksort($keyManifest);
+        ksort($options);
+
         $this->optionVirtualDateFields = $options['virtualDateFields'] ?? true;
         $this->optionAllowSqlCondition = $options['allowSqlCondition'] ?? false;
         $this->sqlAllowedGroups        = $options['sqlAllowedGroups'] ?? [];
+
 
         $this->db            = $db;
         $Migrated            = $this->migrateLegacyData($tableManifest, $keyManifest);
@@ -257,12 +263,17 @@ abstract class waveQlCore
 
         //-- OR group special handling
         if ($values !== null && isset($values[self::GROUP_OR]) && is_array($values[self::GROUP_OR])) {
+
             $conditions = $values[self::GROUP_OR];
             unset($conditions[self::GROUP_OR]);
+
+            ksort($conditions);
+
             $this->keyManifestLive[self::GROUP_OR] = [
                 'type'       => self::GROUP_OR . 'item',
                 'conditions' => $conditions,
             ];
+
         } elseif ($resetValues && isset($this->keyManifestLive[self::GROUP_OR])) {
             unset($this->keyManifestLive[self::GROUP_OR]);
         }
@@ -583,37 +594,59 @@ abstract class waveQlCore
         ];
     }
 
+
+
+    ########################### VIRTUAL DATE FIELDS
+
+    ##### Returns the mapping of sub-types to SQL functions for a given date/time type.
+    ##### Used internally for auto-field generation and externally for UI.
+    public static function getVirtualDateFuncMap(string $type): array
+    {
+
+        if (!in_array($type, self::DATETIME_TYPES)) return [];
+
+        $map = [];
+        if (in_array($type, [self::TYPE_DATETIME, self::TYPE_DATE])) {
+            $map[self::TYPE_DATE]    = 'DATE';
+            $map[self::TYPE_YEAR]    = 'YEAR';
+            $map[self::TYPE_QUARTER] = 'QUARTER';
+            $map[self::TYPE_MONTH]   = 'MONTH';
+            $map[self::TYPE_DAY]     = 'DAY';
+        }
+        if (in_array($type, [self::TYPE_DATETIME, self::TYPE_TIME])) {
+            $map[self::TYPE_TIME]   = 'TIME';
+            $map[self::TYPE_HOUR]   = 'HOUR';
+            $map[self::TYPE_MINUTE] = 'MINUTE';
+        }
+        if (in_array($type, [self::TYPE_DATETIME, self::TYPE_DATE, self::TYPE_TIME])) {
+            $map[self::TYPE_UTS] = 'UNIX_TIMESTAMP';
+        }
+
+        asort($map);
+
+        return $map;
+    }
+
     ##### Generates virtual fields for date/time (e.g. fieldYEAR).
     protected function generateAutoFields(string $key, array $config): array
     {
-        if (!in_array($config['type'], self::DATETIME_TYPES)) return [];
 
-        $funcs = [];
-        if ($config['type'] === self::TYPE_DATETIME || $config['type'] === self::TYPE_DATE) {
-            $funcs[self::TYPE_DATE]    = 'DATE';
-            $funcs[self::TYPE_YEAR]    = 'YEAR';
-            $funcs[self::TYPE_QUARTER] = 'QUARTER';
-            $funcs[self::TYPE_MONTH]   = 'MONTH';
-            $funcs[self::TYPE_DAY]     = 'DAY';
-        }
-        if ($config['type'] === self::TYPE_DATETIME || $config['type'] === self::TYPE_TIME) {
-            $funcs[self::TYPE_TIME]   = 'TIME';
-            $funcs[self::TYPE_HOUR]   = 'HOUR';
-            $funcs[self::TYPE_MINUTE] = 'MINUTE';
-        }
-        $funcs[self::TYPE_UTS] = 'UNIX_TIMESTAMP';
+        $funcs = self::getVirtualDateFuncMap($config['type'] ?? '');
+        $auto  = [];
+        if (!empty($funcs)) {
 
-        $auto = [];
-        foreach ($funcs as $subType => $sqlFunc) {
-            $autoKey = $key . strtoupper($subType);
-            $auto[$autoKey] = [
-                'value'   => '',
-                'rowName' => $sqlFunc . '(' . $config['rowName'] . ')',
-                'type'    => $subType,
-            ];
+            foreach ($funcs as $subType => $sqlFunc) {
+                $autoKey = $key . strtoupper($subType);
+                $auto[$autoKey] = [
+                    'value'   => '',
+                    'rowName' => $sqlFunc . '(' . $config['rowName'] . ')',
+                    'type'    => $subType,
+                ];
+            }
         }
         return $auto;
     }
+
 
     ########################### HELPER METHODS
 
@@ -777,7 +810,6 @@ abstract class waveQlCore
         if ($type === self::TYPE_FLOAT) return 'd';
         return in_array($type, self::NUMERIC_TYPES) ? 'i' : 's';
     }
-
 
 
 

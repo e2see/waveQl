@@ -61,7 +61,6 @@ This is how easy it is with waveQl:
 ```php
 
 // waveQl – Because filtering should be intuitive
-
 require_once 'waveQl.php';
 
 
@@ -80,25 +79,30 @@ $tableManifest = [
     ]
 ];
 
-// Field definitions (logical name => SQL column + type)
+
+//  Field definitions
+//  logical name    =>               SQL column                   SQL type
 $keyManifest = [
-    'CountryName'    => ['rowName' => 'c.name',          'type' => 'string'],
-    'Population'     => ['rowName' => 'c.population',    'type' => 'integer'],
-    'AreaKm2'        => ['rowName' => 'c.area_km2',      'type' => 'integer'],
-    'Capital'        => ['rowName' => 'c.capital',       'type' => 'string'],
-    'FoundedYear'    => ['rowName' => 'c.founded_year',  'type' => 'integer'],
-    'FoundedDate'    => ['rowName' => 'c.founded_date',  'type' => 'dateTime'],
-    'ContinentName'  => ['rowName' => 'cnt.name',        'type' => 'string'],
-    '~meta~'         => [   // default meta settings (sort, pageSize, searchTarget)
+    'AreaKm2'       => ['rowName' => 'c.area_km2',      'type' => 'integer'],
+    'Capital'       => ['rowName' => 'c.capital',       'type' => 'string'],
+    'ContinentId'   => ['rowName' => 'cnt.id',          'type' => 'integer'],
+    'ContinentName' => ['rowName' => 'cnt.name',        'type' => 'string'],
+    'CountryName'   => ['rowName' => 'c.name',          'type' => 'string'],
+    'FoundedDate'   => ['rowName' => 'c.founded_date',  'type' => 'date'],
+    'FoundedYear'   => ['rowName' => 'c.founded_year',  'type' => 'integer'],
+    'Population'    => ['rowName' => 'c.population',    'type' => 'integer'],
+    '~meta~'        => [ // default meta settings (sort, pageSize, searchTarget)
         'sort'         => '>CountryName',
         'pageSize'     => 20,
         'searchTarget' => 'CountryName,Capital,ContinentName'
     ],
 ];
 
+
 $db      = new mysqli('localhost', 'root', '', 'mydb');
 $wave    = \e2\waveQl::create($db, $tableManifest, $keyManifest);
 $builder = $wave->read(); // read-modus (also possible: write for INSERTS)
+
 
 ```
 
@@ -128,43 +132,38 @@ The resulting SQL – clean and powerful:
 
 ```sql
 
-
 SELECT
-    `c`.`name`               AS CountryName,
-    `c`.`population`         AS Population,
     `c`.`area_km2`           AS AreaKm2,
     `c`.`capital`            AS Capital,
-    `c`.`founded_year`       AS FoundedYear,
+    `cnt`.`id`               AS ContinentId,
+    `cnt`.`name`             AS ContinentName,
+    `c`.`name`               AS CountryName,
     `c`.`founded_date`       AS FoundedDate,
     DATE(c.founded_date)     AS FoundedDateDATE,
-    YEAR(c.founded_date)     AS FoundedDateYEAR,
-    QUARTER(c.founded_date)  AS FoundedDateQUARTER,
-    MONTH(c.founded_date)    AS FoundedDateMONTH,
     DAY(c.founded_date)      AS FoundedDateDAY,
-    TIME(c.founded_date)     AS FoundedDateTIME,
-    HOUR(c.founded_date)     AS FoundedDateHOUR,
-    MINUTE(c.founded_date)   AS FoundedDateMINUTE,
+    MONTH(c.founded_date)    AS FoundedDateMONTH,
+    QUARTER(c.founded_date)  AS FoundedDateQUARTER,
     UNIX_TIMESTAMP(c.founded_date) AS FoundedDateUTS,
-    `cnt`.`name`             AS ContinentName
+    YEAR(c.founded_date)     AS FoundedDateYEAR,
+    `c`.`founded_year`       AS FoundedYear,
+    `c`.`population`         AS Population
 FROM
     `countries` `c`
         LEFT JOIN
             `continents` `cnt`
             ON (`cnt`.`id` = `c`.`continent_id`)
 WHERE 1
-    AND `c`.`founded_year`   <= 1950
-    AND `c`.`founded_year`   > 1900
     AND `cnt`.`name`         = 'Asia'
+    AND `c`.`founded_year`   > 1900
+    AND `c`.`founded_year`   <= 1950
     AND (
-            (`c`.`population` > 60000000)
-         OR (`c`.`area_km2`  > 2200000)
+            (`c`.`area_km2`  > 2200000)
+         OR (`c`.`population` > 60000000)
     )
 ORDER BY
     `CountryName`            DESC
 LIMIT
     0, 20
-
-
 
 ```
 
@@ -173,7 +172,7 @@ Done. No manual WHERE fiddling, no mistakes with forgotten parentheses.
 
 <br />
 
-And there you have it – the matching records, complete with those handy auto‑generated date/time columns.
+And there you have it – the matching records, complete with those handy **auto‑generated date/time columns**.
 
 
 ```sql
@@ -188,9 +187,6 @@ FoundedDateYEAR   | 1923            | 1947            | 1945            | 1947
 FoundedDateQUARTER| 4               | 3               | 3               | 3
 FoundedDateMONTH  | 10              | 8               | 8               | 8
 FoundedDateDAY    | 29              | 14              | 17              | 15
-FoundedDateTIME   | 00:00:00        | 00:00:00        | 00:00:00        | 00:00:00
-FoundedDateHOUR   | 0               | 0               | 0               | 0
-FoundedDateMINUTE | 0               | 0               | 0               | 0
 FoundedDateUTS    | NULL            | NULL            | NULL            | NULL
 FoundedDate       | 1923-10-29      | 1947-08-14      | 1945-08-17      | 1947-08-15
 ContinentName     | Asia            | Asia            | Asia            | Asia
@@ -213,7 +209,7 @@ Want to give it a spin yourself? The included demo UI lets you experiment with a
 If you prefer Composer, you can add the repository to your `composer.json` (the package is not yet published on Packagist).
 
 **Requirements**
-- PHP ≥8.0
+- PHP ≥8.1
 - A database connection: either a `mysqli` object **or** an object implementing the `waveQlDbInterface` (e.g. a custom PDO wrapper).
 
 No other dependencies – just PHP ≥8.1 and a database connection (mysqli or a custom adapter).
