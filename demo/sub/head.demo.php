@@ -196,14 +196,21 @@ if ($action !== '') {
         $action = '';
     }
 }
-if ($mode === 'write' && !$allowWrite) {
-    $mode = false;
-} elseif ($mode === 'read' && !$allowRead) {
-    $mode = false;
-}
 
-if (!$mode) {
-    die('Activate allowRead or allowWrite in the config');
+// Neue Logik: Kein die() mehr, sondern schöne Meldung im Template
+$modeError = null;  // Fehlermeldung, falls beide Modi deaktiviert sind
+
+if (!$allowRead && !$allowWrite) {
+    // Beide Modi deaktiviert → Fehlermeldung, kein gültiger Modus
+    $modeError = 'Read and write modes are both disabled. Please enable at least one in the configuration.';
+    $mode = null;
+} else {
+    // Stelle sicher, dass der gewählte Modus erlaubt ist, sonst fallback
+    if ($mode === 'read' && !$allowRead) {
+        $mode = 'write';
+    } elseif ($mode === 'write' && !$allowWrite) {
+        $mode = 'read';
+    }
 }
 
 $filter       = [];
@@ -282,14 +289,14 @@ $liveMetaManifest  = $meta;
 $liveTableManifest = $tableManifest;
 
 try {
-
-    $waveForManifest = \e2\waveQl::create($mysqli, $tableManifest, $keyManifest, $waveOptions);
-    $readInstance    = $waveForManifest->read();
-    if (!empty($filter)) $readInstance->setValues($filter);
-    if (!empty($meta)) $readInstance->setMeta($meta);
-    $liveKeyManifest  = $readInstance->getManifest('key', 'live');
-    $liveMetaManifest = $readInstance->getManifest('meta', 'live');
-
+    if ($mode !== null) {
+        $waveForManifest = \e2\waveQl::create($mysqli, $tableManifest, $keyManifest, $waveOptions);
+        $readInstance    = $waveForManifest->read();
+        if (!empty($filter)) $readInstance->setValues($filter);
+        if (!empty($meta)) $readInstance->setMeta($meta);
+        $liveKeyManifest  = $readInstance->getManifest('key', 'live');
+        $liveMetaManifest = $readInstance->getManifest('meta', 'live');
+    }
 } catch (Exception $e) {
     // Fallback
 }
@@ -300,7 +307,7 @@ try {
 $blinkSql    = false;
 $blinkResult = false;
 
-if ($action !== '') {
+if ($action !== '' && $mode !== null) {
     try {
         $wave = \e2\waveQl::create($mysqli, $tableManifest, $keyManifest, $waveOptions);
 
