@@ -79,6 +79,7 @@ body {
     margin: 0;
     padding: 20px 20px 30vh;
     color: var(--color-text-body);
+    transition: padding 0.5s;
 }
 
 h1 {

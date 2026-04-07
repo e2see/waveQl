@@ -55,3 +55,17 @@
         width: 140px;
     }
 }
+
+@media (min-width: 1800px) {
+    body{
+        padding-left: 5vw;
+        padding-right: 5vw;
+    }
+}
+
+@media (min-width: 2000px) {
+    body{
+        padding-left: 10vw;
+        padding-right: 10vw;
+    }
+}
