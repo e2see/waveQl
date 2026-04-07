@@ -23,7 +23,7 @@
 
 <body>
     <a class="logo-container" href="./">
-        <img src="../images/logo-s.png" alt="waveQl Logo" id="logo" />
+        <img src="../images/logo-m.png" alt="waveQl Logo" id="logo" />
     </a>
     <h1>waveQl Playground</h1>
 
