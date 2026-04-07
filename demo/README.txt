@@ -13,12 +13,12 @@
  *
  */
 ╔══════════════════════════════════════════════════════════════════╗
-║                     waveQl Test Environment                      ║
+║                        waveQl Playground                         ║
 ║                  SQL Query Builder – Live Demo                   ║
 ╚══════════════════════════════════════════════════════════════════╝
 
 ────────────────────────────────────────────────────────────────────
-  QUICK START (RECOMMENDED)
+  QUICK START
 ────────────────────────────────────────────────────────────────────
 
 ▶ 1. Place the waveQl files
@@ -37,14 +37,14 @@
    Edit config.php – enter your MySQL credentials (host, user, password, dbname).
    The database will be created automatically if it doesn't exist.
 
-▶ 3. Start the demo
+▶ 3. Launch the Playground
    Open index.php in your browser.
 
    • If the database or tables are missing → a setup screen appears.
    • Click the button to auto‑initialize the database (runs setup.sql).
-   • After success, the full demo UI loads.
+   • After success, the full UI loads – ready to play!
 
-▶ 4. Explore & test
+▶ 4. Explore & play
    • Use the form to run SELECT queries with operators like >10, ~text~, etc.
    • Try the preset filters (e.g., "Large population", "Summer founders").
    • Add new countries (Write mode – INSERT).
@@ -54,7 +54,7 @@
 ────────────────────────────────────────────────────────────────────
 
    Simply open:   index.php?initSQL=1
-   (or use the "reset/initialise database" link in the demo UI)
+   (or use the "reset / initialise database" link in the UI)
 
 ────────────────────────────────────────────────────────────────────
   HOW waveQl WORKS
@@ -82,8 +82,8 @@
   NAMESPACE
 ────────────────────────────────────────────────────────────────────
 
-   The test form uses the factory class:   \e2\waveQl
+   The playground uses the factory class:   \e2\waveQl
 
 ────────────────────────────────────────────────────────────────────
-  ENJOY FILTERING! 💙
+  HAVE FUN SURFING THE WAVES! 🌊
 ────────────────────────────────────────────────────────────────────

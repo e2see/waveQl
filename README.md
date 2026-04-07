@@ -23,13 +23,13 @@ Because filtering should be fun.
 Look at this:
 
 ```php
-$input = [
-    'FoundedYear'   => '1900><=1950',   // between 1901 and 1950 (inclusive)
-    'ContinentName' => 'Asia',
-    '~or~'          => [
-        'Population' => '>60000000',
-        'AreaKm2'    => '>2200000'
-    ]
+$filters = [
+    'FoundedDateYEAR' => '1900><=1950',   // between 1901 and 1950 (inclusive)
+    'ContinentName'   => 'Asia',
+    '~or~'            => [
+                        'Population' => '>60000000',
+                        'AreaKm2'    => '>2200000'
+                        ]
 ];
 ```
 
@@ -89,7 +89,6 @@ $keyManifest = [
     'ContinentName' => ['rowName' => 'cnt.name',        'type' => 'string'],
     'CountryName'   => ['rowName' => 'c.name',          'type' => 'string'],
     'FoundedDate'   => ['rowName' => 'c.founded_date',  'type' => 'date'],
-    'FoundedYear'   => ['rowName' => 'c.founded_year',  'type' => 'integer'],
     'Population'    => ['rowName' => 'c.population',    'type' => 'integer'],
     '~meta~'        => [ // default meta settings (sort, pageSize, searchTarget)
         'sort'         => '>CountryName',
@@ -111,12 +110,12 @@ That was the one-time setup – now the real filter fun begins!
 ```php
 
 $filters = [
-    'FoundedYear'   => '1900><=1950',   // between 1901 and 1950 (inclusive)
-    'ContinentName' => 'Asia',
-    '~or~'          => [
-        'Population' => '>60000000',
-        'AreaKm2'    => '>2200000'
-    ]
+    'FoundedDateYEAR' => '1900><=1950',   // between 1901 and 1950 (inclusive)
+    'ContinentName'   => 'Asia',
+    '~or~'            => [
+                        'Population' => '>60000000',
+                        'AreaKm2'    => '>2200000'
+                        ]
 ];
 
 
@@ -145,7 +144,6 @@ SELECT
     QUARTER(c.founded_date)  AS FoundedDateQUARTER,
     UNIX_TIMESTAMP(c.founded_date) AS FoundedDateUTS,
     YEAR(c.founded_date)     AS FoundedDateYEAR,
-    `c`.`founded_year`       AS FoundedYear,
     `c`.`population`         AS Population
 FROM
     `countries` `c`
@@ -181,7 +179,6 @@ CountryName       | Turkey          | Pakistan        | Indonesia       | India
 Population        | 84,300,000      | 220,000,000     | 273,000,000     | 1,380,000,000
 AreaKm2           | 783,600         | 881,900         | 1,905,000       | 3,287,000
 Capital           | Ankara          | Islamabad       | Jakarta         | New Delhi
-FoundedYear       | 1923            | 1947            | 1945            | 1947
 FoundedDateDATE   | 1923-10-29      | 1947-08-14      | 1945-08-17      | 1947-08-15
 FoundedDateYEAR   | 1923            | 1947            | 1945            | 1947
 FoundedDateQUARTER| 4               | 3               | 3               | 3
@@ -193,7 +190,7 @@ ContinentName     | Asia            | Asia            | Asia            | Asia
 
 ```
 
-Want to give it a spin yourself? The included demo UI lets you experiment with all operators, magic keys, and joins live.
+Want to give it a spin yourself? The included Playground lets you experiment with all operators, magic keys, and joins live.
 
 
 <br><br>
@@ -218,9 +215,9 @@ No other dependencies – just PHP ≥8.1 and a database connection (mysqli or a
 
 
 <br><br>
-◤◤◤ Demo Environment
+◤◤◤ Playground
 
-The repository includes a **ready‑to‑run demo environment**. Just copy the waveQl files into the parent directory and point your browser to `index.php`. You can explore all operators, magic keys, and joins interactively.
+The repository includes a **ready‑to‑run Playground**. Just copy the waveQl files into the parent directory and point your browser to `index.php`. You can explore all operators, magic keys, and joins interactively.
 
 A **database setup script** is included – simply click the *"reset/initialise database"* link to create the demo tables and sample data. The interface lets you apply filters, see the generated SQL, and execute queries in real time. It's the perfect sandbox to experiment with waveQl's features.
 

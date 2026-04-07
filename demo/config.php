@@ -19,7 +19,7 @@ $user   = 'root';
 $pass   = '';
 $dbname = 'waveql_test';
 
-// ----- Security settings for demo mode -----
+// ----- Security settings for the playground -----
 $allowRead    = true;   // Read mode (SELECT) allowed
 $allowWrite   = true;  // Write mode (INSERT/UPDATE/DELETE) allowed
 $allowInitSQL = true;  // Automatic table initialisation via ?initSQL=1 allowed

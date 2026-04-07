@@ -1,19 +1,6 @@
 document.addEventListener('DOMContentLoaded', async function () {
-    const logo = document.getElementById('logo');
-    if (logo) {
-        let hideTimeout = null;
-        function startHideTimer() {
-            if (hideTimeout) clearTimeout(hideTimeout);
-            hideTimeout = setTimeout(() => {
-                logo.classList.remove('logo-hidden');
-                hideTimeout = null;
-            }, 2000);
-        }
-        logo.addEventListener('mouseenter', () => {
-            logo.classList.add('logo-hidden');
-            startHideTimer();
-        });
-    }
+
+
 
     let presets = [];
     try {

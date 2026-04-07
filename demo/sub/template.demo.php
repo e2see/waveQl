@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>waveQl Test Environment</title>
+    <title>waveQl Playground </title>
     <link rel="icon" type="image/png" href="../images/logo-xs.png" />
     <link rel="stylesheet" href="sub/core.css">
     <link rel="stylesheet" href="sub/template.css">
@@ -22,10 +22,10 @@
 </head>
 
 <body>
-    <div class="logo-container">
+    <a class="logo-container" href="./">
         <img src="../images/logo-s.png" alt="waveQl Logo" id="logo" />
-    </div>
-    <h1>waveQl Test Environment</h1>
+    </a>
+    <h1>waveQl Playground</h1>
 
     <?php if ($allowInitSQL): ?>
         <p><a href="?initSQL=1">Click here to reset / initialise the database</a></p>
@@ -65,15 +65,23 @@
         <!-- Obere drei Boxen (immer sichtbar) -->
         <div class="dashboard-row">
             <div class="dashboard-card collapsible">
-                <div class="card-header">📋 Manifest (live) <button class="toggle-btn" type="button">▼</button></div>
+                <div class="card-header">📋 Manifest<button class="toggle-btn" type="button">▼</button></div>
                 <div class="card-body">
-                    <pre class="code-block">=== tableManifest ===\n<?= json_encode($liveTableManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?>\n\n=== keyManifest (liveOp) ===\n<?= json_encode($liveKeyManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?>\n\n=== metaManifest (live) ===\n<?= json_encode($liveMetaManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?></pre>
+                    <pre class="code-block">##### tableManifest<?=
+                    htmlspecialchars(json_encode($tableManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)).PHP_EOL
+                    ?>##### keyManifest<?=
+                    htmlspecialchars(json_encode($keyManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)).PHP_EOL
+                    ?></pre>
                 </div>
             </div>
             <div class="dashboard-card collapsible">
                 <div class="card-header">🔍 Current Filter <button class="toggle-btn" type="button">▼</button></div>
                 <div class="card-body">
-                    <pre class="code-block"><?= json_encode($filter, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?></pre>
+                    <pre class="code-block">##### setValues:<?=
+                     htmlspecialchars(json_encode($filter, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)).PHP_EOL
+                    ?>##### setMeta:<?=
+                    htmlspecialchars(json_encode($metaManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)).PHP_EOL
+                    ?></pre>
                 </div>
             </div>
             <div class="dashboard-card <?= $blinkSql ? 'blink-box' : '' ?>" id="sqlBox">
@@ -103,48 +111,43 @@
                             </div>
                             <?php
                             $submittedFields = (array)($_GET['fulltext_fields'] ?? []);
-                            $allFields = $originalFields;
+                            $allFields       = $originalFields;
 
                             foreach ($allFields as $field):
                                 if ($field === $foreignKeyLogicalName) continue;
                                 if (in_array($field, $dateFields)) continue;
-                                $value = $_GET[$field] ?? '';
-                                $placeholder = '';
-                                $datalistId = '';
+                                $value           = $_GET[$field] ?? '';
+                                $placeholder     = '';
+                                $datalistId      = '';
                                 $datalistOptions = [];
                                 switch ($field) {
                                     case 'CountryName':
-                                        $placeholder = '~land~ or !NULL';
-                                        $datalistId = 'countryList';
+                                        $placeholder     = '~land~ or !NULL';
+                                        $datalistId      = 'countryList';
                                         $datalistOptions = $countryNames ?? [];
                                         break;
                                     case 'Population':
-                                        $placeholder = '>1000000 or 50000000><200000000';
-                                        $datalistId = 'populationExamples';
+                                        $placeholder     = '>1000000 or 50000000><200000000';
+                                        $datalistId      = 'populationExamples';
                                         $datalistOptions = $populationExamples ?? [];
                                         break;
                                     case 'AreaKm2':
-                                        $placeholder = '>1000000 or 1000000><5000000';
-                                        $datalistId = 'areaExamples';
+                                        $placeholder     = '>1000000 or 1000000><5000000';
+                                        $datalistId      = 'areaExamples';
                                         $datalistOptions = $areaExamples ?? [];
                                         break;
                                     case 'Capital':
-                                        $placeholder = '~Berlin~ or !BLANK';
-                                        $datalistId = 'capitalList';
+                                        $placeholder     = '~Berlin~ or !BLANK';
+                                        $datalistId      = 'capitalList';
                                         $datalistOptions = $capitals ?? [];
                                         break;
-                                    case 'FoundedYear':
-                                        $placeholder = '1800><1950 or >1900';
-                                        $datalistId = 'yearExamples';
-                                        $datalistOptions = $yearExamples ?? [];
-                                        break;
                                     case 'ContinentName':
-                                        $placeholder = '~Asia~ or !EMPTY';
-                                        $datalistId = 'continentList';
+                                        $placeholder     = '~Asia~ or !EMPTY';
+                                        $datalistId      = 'continentList';
                                         $datalistOptions = $continentNames ?? [];
                                         break;
                                     default:
-                                        $placeholder = 'e.g. 5><9 or >3';
+                                        $placeholder = 'e.g. 5><9f or >3';
                                         break;
                                 }
 
@@ -182,21 +185,22 @@
                                 <?php
                                 $inputValue       = $_GET[$baseField] ?? '';
                                 $selectedFunction = $_GET[$baseField . '_function'] ?? 'Original';
+
                                 if (!$opt_virtualDateFields) {
                                     $selectedFunction = 'Original';
-                                    $disabledAttr = 'disabled';
+                                    $disabledAttr     = 'disabled';
                                 } else {
                                     $disabledAttr = '';
                                 }
 
                                 $currentWaveQlKey = ($selectedFunction === 'Original') ? $baseField : $baseField . $selectedFunction;
                                 $fulltextChecked  = in_array($currentWaveQlKey, (array)($_GET['fulltext_fields'] ?? []));
+                                $units            = $enrichedFields[$baseField]['units'] ?? [];
 
-                                $units = $enrichedFields[$baseField]['units'] ?? [];
                                 ?>
                                 <div class="form-row date-field-group" data-datefield="<?= $baseField ?>">
                                     <label class="date-label"><?= htmlspecialchars($baseField) ?>:</label>
-                                    <input type="text" class="date-input" name="<?= $baseField ?>" value="<?= htmlspecialchars($inputValue) ?>" placeholder="e.g. 5><9 or >3">
+                                    <input type="text" class="date-input" name="<?= $baseField ?>" value="<?= htmlspecialchars($inputValue) ?>" placeholder="e.g. 1923-10-29 or 4 QUARTER">
                                     <select class="date-select-right" name="<?= $baseField ?>_function" <?= $disabledAttr ?>>
                                         <option value="Original" <?= $selectedFunction === 'Original' ? 'selected' : '' ?>>as Original</option>
                                         <?php foreach ($units as $suf): ?>

@@ -1,5 +1,5 @@
 /* ============================================================
-   waveQl Demo – Core (Basiselemente & Animationen)
+   waveQl Playground  – Core (Basiselemente & Animationen)
    ============================================================ */
 
 /* ---------- CSS VARIABLES (30 Stück, kategorisiert) ---------- */
@@ -46,8 +46,8 @@
     --color-warning-text: #a25e00;
 
     /* ===== Schatten ===== */
-    --shadow-default: 5px 5px 10px rgba(0,0,0,.06);
-    --shadow-hover: 3px 3px 5px rgba(0,0,0,.1);
+    --shadow-default: 5px 5px 10px rgba(0, 0, 0, .06);
+    --shadow-hover: 3px 3px 5px rgba(0, 0, 0, .1);
 
     /* ===== Radien ===== */
     --radius-card: 16px;
@@ -59,16 +59,17 @@
     --spacing-xs: 0.3rem;
     --spacing-sm: 0.5rem;
     --spacing-md: 0.75rem;
-    --spacing-lg: 1rem;
-    --spacing-xl: 1.5rem;
-    --spacing-2xl: 2rem;
+    --spacing-lg: 0.8rem;
+    --spacing-xl: 0.9rem;
+    --spacing-2xl: 1.5rem;
 
     /* ===== Schriftgrößen ===== */
-    --font-size-base: 0.85rem;
-    --font-size-small: 0.75rem;
-    --font-size-h1: 1.8rem;
-    --font-size-button: 0.9rem;
-    --font-size-code: 0.8rem;
+    --font-size-base: 0.75rem;
+    --font-size-small: 0.62rem;
+    --font-size-h1: 1.6rem;
+    --font-size-button: 0.8rem;
+    --font-size-code: 0.7rem;
+
 }
 
 /* ---------- Basis-Regeln (Mobile First) ---------- */
@@ -76,26 +77,27 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: var(--color-bg-body);
     margin: 0;
-    padding: 20px;
+    padding: 20px 20px 30vh;
     color: var(--color-text-body);
 }
 
 h1 {
     font-size: var(--font-size-h1);
     font-weight: 500;
-    margin-bottom: var(--spacing-sm);
+    margin: 0 0 var(--spacing-sm) 0;
     color: var(--color-primary);
 }
 
 /* Logo & Animationen (unverändert) */
 .logo-container {
     position: fixed;
-    bottom: 15px;
+    top: 15px;
     right: 20px;
     perspective: 140px;
     width: 100px;
     height: auto;
     z-index: 1000;
+    transition: all 200ms;
 }
 
 #logo {
@@ -114,16 +116,35 @@ h1 {
 }
 
 @keyframes flipOver {
-    0%   { transform: rotateX(0deg); }
-    80%  { transform: rotateX(0deg); }
-    95%  { transform: rotateX(400deg); }
-    100% { transform: rotateX(360deg); }
+    0% {
+        transform: rotateX(0deg);
+    }
+
+    85% {
+        transform: rotateX(0deg);
+    }
+
+    95% {
+        transform: rotateX(390deg);
+    }
+
+    100% {
+        transform: rotateX(360deg);
+    }
 }
 
 @keyframes blinkBorder {
-    0% { box-shadow: 0 0 0 0 #eec247; }
-    50% { box-shadow: 0 0 4px 4px #eec247; }
-    100% { box-shadow: 0 0 0 0 #eec247; }
+    0% {
+        box-shadow: 0 0 0 0 #eec247;
+    }
+
+    50% {
+        box-shadow: 0 0 4px 4px #eec247;
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 #eec247;
+    }
 }
 
 .blink-box {

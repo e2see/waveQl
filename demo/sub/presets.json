@@ -12,8 +12,8 @@
         "id": "preset2",
         "label": "📅 Founded between 1800 and 1950",
         "values": {
-            "FoundedYear": "1800><1950",
-            "sort": "<FoundedYear",
+            "FoundedDateYEAR": "1800><1950",
+            "sort": "<FoundedDateYEAR",
             "pageSize": "20"
         }
     },

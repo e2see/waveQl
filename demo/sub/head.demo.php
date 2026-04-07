@@ -45,7 +45,6 @@ $keyManifest = [
     'ContinentName' => ['rowName' => 'cnt.name',        'type' => 'string'],
     'CountryName'   => ['rowName' => 'c.name',          'type' => 'string'],
     'FoundedDate'   => ['rowName' => 'c.founded_date',  'type' => 'date'],
-    'FoundedYear'   => ['rowName' => 'c.founded_year',  'type' => 'integer'],
     'Population'    => ['rowName' => 'c.population',    'type' => 'integer'],
     '~meta~'        => [
         'sort'         => '>CountryName',
@@ -169,7 +168,7 @@ $allVirtualSuffixes = array_values(array_unique($allVirtualSuffixes));
 // ----------------------------------------------------------------------
 // Datalist suggestions (statisch, aber Feldnamen dynamisch)
 // ----------------------------------------------------------------------
-$sortExamples       = ['>Population', '<CountryName', '>FoundedYear', '<AreaKm2', '>FoundedDateYEAR'];
+$sortExamples       = ['>Population', '<CountryName', '>FoundedDateYEAR', '<AreaKm2'];
 $populationExamples = ['>1000000', '50000000><200000000', '!0', '10000000><50000000', '>100000000'];
 $areaExamples       = ['>1000000', '5000000><10000000', '<500000', '>2000000'];
 $yearExamples       = ['1800><1950', '>1900', '<0', '!NULL', '1500><=2000'];
@@ -214,7 +213,7 @@ if (!$allowRead && !$allowWrite) {
 }
 
 $filter       = [];
-$meta         = [];
+$metaManifest = [];
 $writeData    = [];
 $errorMsg     = '';
 $sqlOutput    = '';
@@ -256,16 +255,16 @@ try {
                 $filter[$baseField . $function] = $value;
             }
         }
-        if (isset($_GET['sort']) && $_GET['sort'] !== '') $meta['sort']                        = trim($_GET['sort']);
-        if (isset($_GET['pageSize']) && is_numeric($_GET['pageSize'])) $meta['pageSize']       = (int)$_GET['pageSize'];
-        if (isset($_GET['pageNumber']) && is_numeric($_GET['pageNumber'])) $meta['pageNumber'] = (int)$_GET['pageNumber'];
+        if (isset($_GET['sort']) && $_GET['sort'] !== '') $metaManifest['sort']                        = trim($_GET['sort']);
+        if (isset($_GET['pageSize']) && is_numeric($_GET['pageSize'])) $metaManifest['pageSize']       = (int)$_GET['pageSize'];
+        if (isset($_GET['pageNumber']) && is_numeric($_GET['pageNumber'])) $metaManifest['pageNumber'] = (int)$_GET['pageNumber'];
            $fulltextFields                                                                     = $_GET['fulltext_fields'] ?? [];
         if (!is_array($fulltextFields)) $fulltextFields                                        = [];
            $fulltextSearchString                                                               = trim($_GET['fulltext_search_string'] ?? '');
-        if (!empty($fulltextFields)) $meta['searchTarget']                                     = implode(',', $fulltextFields);
-        if (!empty($fulltextSearchString)) $meta['searchString']                               = $fulltextSearchString;
+        if (!empty($fulltextFields)) $metaManifest['searchTarget']                                     = implode(',', $fulltextFields);
+        if (!empty($fulltextSearchString)) $metaManifest['searchString']                               = $fulltextSearchString;
         if ($opt_allowSqlCondition && isset($_GET['sqlCondition']) && trim($_GET['sqlCondition']) !== '') {
-            $meta['sqlCondition'] = trim($_GET['sqlCondition']);
+            $metaManifest['sqlCondition'] = trim($_GET['sqlCondition']);
         }
     } else {
         $writeFields = $writeFieldNames;
@@ -274,32 +273,14 @@ try {
                 $writeData[$field] = trim($_GET[$field]);
             }
         }
-        $meta['uniqueKey'] = 'id';
-        $meta['returning'] = true;
+        $metaManifest['uniqueKey'] = 'id';
+        $metaManifest['returning'] = true;
     }
 } catch (Exception $e) {
     $errorMsg = $e->getMessage();
 }
 
-// ----------------------------------------------------------------------
-// Create waveQl instance for live manifests
-// ----------------------------------------------------------------------
-$liveKeyManifest   = $keyManifest;
-$liveMetaManifest  = $meta;
-$liveTableManifest = $tableManifest;
 
-try {
-    if ($mode !== null) {
-        $waveForManifest = \e2\waveQl::create($mysqli, $tableManifest, $keyManifest, $waveOptions);
-        $readInstance    = $waveForManifest->read();
-        if (!empty($filter)) $readInstance->setValues($filter);
-        if (!empty($meta)) $readInstance->setMeta($meta);
-        $liveKeyManifest  = $readInstance->getManifest('key', 'live');
-        $liveMetaManifest = $readInstance->getManifest('meta', 'live');
-    }
-} catch (Exception $e) {
-    // Fallback
-}
 
 // ----------------------------------------------------------------------
 // Execution (or preview) with redirect after successful write
@@ -315,7 +296,7 @@ if ($action !== '' && $mode !== null) {
 
             $builder = $wave->read();
 
-            if (!empty($meta)) $builder->setMeta($meta);
+            if (!empty($metaManifest)) $builder->setMeta($metaManifest);
             if (!empty($filter)) $builder->setValues($filter);
 
             if ($action === 'preview') {
@@ -334,7 +315,7 @@ if ($action !== '' && $mode !== null) {
 
             $builder = $wave->write();
 
-            if (!empty($meta)) $builder->setMeta($meta);
+            if (!empty($metaManifest)) $builder->setMeta($metaManifest);
             if (!empty($writeData)) $builder->setValues($writeData);
             if ($action === 'preview') {
                 $sql      = $builder->getQuery();

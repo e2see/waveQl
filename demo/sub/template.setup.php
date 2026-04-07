@@ -12,10 +12,10 @@
 </head>
 
 <body>
-    <div class="logo-container">
+    <a class="logo-container" href="./">
         <img src="../images/logo-s.png" alt="waveQl Logo" id="logo" />
-    </div>
-    <h1>waveQl Test Environment – Setup</h1>
+    </a>
+    <h1>waveQl Playground  – Setup</h1>
 
     <div class="message <?= strpos($setupMessage, '❌') !== false ? 'error' : 'warning' ?>">
         <?= $setupMessage ?>
