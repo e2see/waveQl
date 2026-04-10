@@ -338,7 +338,7 @@ if ($action !== '' && $mode !== null) {
     }
 }
 
-if ($sql) $sqlOutput = htmlspecialchars($sql);
+if ($sql) $sqlOutput = trim(htmlspecialchars($sql));
 if ($execError) $errorMsg = $execError;
 
 // Result output for read

@@ -31,6 +31,17 @@ namespace e2;
 class waveQlRead extends waveQlCore
 {
 
+
+    protected const ALLOWED_META_KEYS = [
+                                        'sort',
+                                        'pageNumber',
+                                        'pageSize',
+                                        'firstElemNumber',
+                                        'sqlCondition',
+                                        'searchString',
+                                        'searchTarget'
+                                        ];
+
     protected readonly bool $optionPrepared;
 
     ########################### CONSTRUCTOR
@@ -50,6 +61,7 @@ class waveQlRead extends waveQlCore
         $this->updateLive(null, $meta, false, true);
         return $this;
     }
+
 
     ##### Sets the search values (with optional operators).
     public function setValues(array $values): self

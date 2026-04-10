@@ -43,9 +43,14 @@ namespace e2;
  */
 class waveQlWrite extends waveQlCore
 {
-    protected array $meta   = [];
-    protected array $values = [];
-
+    protected array $meta             = [];
+    protected array $values           = [];
+    protected const ALLOWED_META_KEYS = [
+        'uniqueKey',
+        'returning',
+        'safe',
+        'updatePrimaryKey',
+    ];
 
     ########################### CONSTRUCTOR
 
@@ -62,6 +67,10 @@ class waveQlWrite extends waveQlCore
     ##### Sets meta information (uniqueKey, returning, safe, updatePrimaryKey).
     public function setMeta(array $meta): self
     {
+        $unknown = array_diff(array_keys($meta), static::ALLOWED_META_KEYS);
+        if (!empty($unknown)) {
+            throw new waveQlInvalidArgumentException('Unknown meta key(s): ' . implode(', ', $unknown));
+        }
         $this->meta = $meta;
         return $this;
     }
@@ -108,7 +117,7 @@ class waveQlWrite extends waveQlCore
         foreach ($this->values as $field => $value) {
             $detail = $this->getFieldDetail($field);
             if (!$detail) {
-                throw new waveQlInvalidArgumentException("Field '$field' not defined in keyManifest.");
+                throw new waveQlInvalidArgumentException('Field ' . $field . ' not defined in keyManifest.');
             }
             $fields[]        = $detail['fullQuoted'];
             $placeholders[]  = '?';
@@ -150,7 +159,7 @@ class waveQlWrite extends waveQlCore
 
         $idValue = $this->values[$uniqueKey] ?? null;
         if ($idValue === null) {
-            throw new waveQlInvalidArgumentException("uniqueKey '$uniqueKey' not present in values.");
+            throw new waveQlInvalidArgumentException('uniqueKey ' . $uniqueKey . ' not present in values.');
         }
 
         $setParts         = [];
@@ -165,7 +174,7 @@ class waveQlWrite extends waveQlCore
             }
             $detail = $this->getFieldDetail($logicalName);
             if (!$detail) {
-                throw new waveQlInvalidArgumentException("Field '$logicalName' not defined in keyManifest.");
+                throw new waveQlInvalidArgumentException('Field ' . $logicalName . ' not defined in keyManifest.');
             }
             $setParts[] = $detail['fullQuoted'] . ' = ?';
             $params[]   = $value;
@@ -179,7 +188,7 @@ class waveQlWrite extends waveQlCore
         //-- WHERE part
         $idDetail = $this->getFieldDetail($uniqueKey);
         if (!$idDetail) {
-            throw new waveQlInvalidArgumentException("uniqueKey '$uniqueKey' not defined in keyManifest.");
+            throw new waveQlInvalidArgumentException('uniqueKey ' . $uniqueKey . ' not defined in keyManifest.');
         }
 
         $tableDetail = $this->getTableDetail($this->tableManifest['tableName'] ?? '');
@@ -223,12 +232,12 @@ class waveQlWrite extends waveQlCore
 
         $idValue = $this->values[$uniqueKey] ?? null;
         if ($idValue === null) {
-            throw new waveQlInvalidArgumentException("uniqueKey '$uniqueKey' not present in values.");
+            throw new waveQlInvalidArgumentException('uniqueKey ' . $uniqueKey . ' not present in values.');
         }
 
         $idDetail = $this->getFieldDetail($uniqueKey);
         if (!$idDetail) {
-            throw new waveQlInvalidArgumentException("uniqueKey '$uniqueKey' not defined in keyManifest.");
+            throw new waveQlInvalidArgumentException('uniqueKey ' . $uniqueKey . ' not defined in keyManifest.');
         }
 
         $tableDetail = $this->getTableDetail($this->tableManifest['tableName'] ?? '');

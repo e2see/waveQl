@@ -39,6 +39,7 @@ abstract class waveQlCore
     protected array $metaManifestLive   = [];
     protected array $keyManifestLiveOp  = [];
     protected array $metaManifestLiveOp = [];
+    protected const ALLOWED_META_KEYS   = [];
 
     protected array $preparedParams = [];
     protected string $preparedTypes = '';
@@ -273,7 +274,6 @@ abstract class waveQlCore
                 'type'       => self::GROUP_OR . 'item',
                 'conditions' => $conditions,
             ];
-
         } elseif ($resetValues && isset($this->keyManifestLive[self::GROUP_OR])) {
             unset($this->keyManifestLive[self::GROUP_OR]);
         }
@@ -297,14 +297,30 @@ abstract class waveQlCore
             $val = ($merge) ? $config['value'] : '';
             if (isset($keyValArr[$key])) {
                 $val = trim((string)$keyValArr[$key]);
+                unset($keyValArr[$key]);
             }
             $this->keyManifestLive[$key]['value'] = $val;
+        }
+
+        if (isset($keyValArr[self::GROUP_OR])) {
+            unset($keyValArr[self::GROUP_OR]);
+        }
+
+        if (!empty($keyValArr)) {
+            $unknown = implode(', ', array_keys($keyValArr));
+            error_log('waveQl: Unknown key(s) in setValues: ' . $unknown . '');
         }
     }
 
     ##### Overwrites meta values and validates pagination.
     protected function updateMetaLive(array $metaArr, bool $merge = true): void
     {
+
+        $unknown = array_diff(array_keys($metaArr), static::ALLOWED_META_KEYS);
+        if (!empty($unknown)) {
+            error_log('waveQl: Unknown meta key(s) in setMeta: ' . implode(', ', $unknown));
+        }
+
         if ($merge) {
             // New values overwrite live data, live data overwrite initial defaults
             $this->metaManifestLive = $this->validateMergeFullfillMetaManifest($metaArr, $this->metaManifestLive, $this->metaManifest);
@@ -317,9 +333,10 @@ abstract class waveQlCore
     ##### Fills missing meta fields with defaults.
     protected function mergeAndFullfillMeta(array $prio1, array $prio2 = [], array $prio3 = []): array
     {
-        $fields = ['sort', 'pageNumber', 'pageSize', 'firstElemNumber', 'sqlCondition', 'searchString', 'searchTarget'];
+
+
         $meta = [];
-        foreach ($fields as $f) {
+        foreach (static::ALLOWED_META_KEYS as $f) {
             if (isset($prio1[$f]) && (is_string($prio1[$f]) || is_numeric($prio1[$f]))) {
                 $meta[$f] = trim((string)$prio1[$f]);
             } elseif (isset($prio2[$f]) && (is_string($prio2[$f]) || is_numeric($prio2[$f]))) {
@@ -537,7 +554,7 @@ abstract class waveQlCore
                 $config['type'] = self::TYPE_STRING;
             }
             if (!in_array($config['type'], self::ENTRY_TYPES)) {
-                error_log("waveQl: Invalid type for {$config['rowName']}: {$config['type']}. Converting to string.");
+                error_log('waveQl: Invalid type for ' . $config['rowName'] . ': ' . $config['type'] . '. Converting to string.');
                 $config['type'] = self::TYPE_STRING;
             }
             if ($config['value'] === null) {
@@ -555,7 +572,7 @@ abstract class waveQlCore
 
         //-- leftTableList → joinList
         if (isset($userTM['leftTableList']) && is_array($userTM['leftTableList']) && !isset($userTM['joinList'])) {
-            error_log("waveQl (table $tableName): leftTableList is deprecated, use joinList. Please update.");
+            error_log('waveQl (table ' . $tableName . '): leftTableList is deprecated, use joinList. Please update.');
             $joinList = [];
             foreach ($userTM['leftTableList'] as $join) {
                 $join['type'] = $join['type'] ?? 'LEFT';
@@ -570,11 +587,11 @@ abstract class waveQlCore
         foreach ($oldMetas as $oMeta) {
             if (isset($userKM[$oMeta])) {
                 if (isset($userKM[self::GROUP_META])) {
-                    error_log("waveQl (table $tableName): keyManifest already contains '" . self::GROUP_META . "'. keyManifest['$oMeta'] will be ignored, please use only '" . self::GROUP_META . "'.");
+                    error_log('waveQl (table ' . $tableName . '): keyManifest already contains ' . self::GROUP_META . '. keyManifest[' . $oMeta . '] will be ignored, please use only ' . self::GROUP_META . '.');
                     $userKM[self::GROUP_META] = $userKM[$oMeta];
                     unset($userKM[$oMeta]);
                 } else {
-                    error_log("waveQl (table $tableName): keyManifest['$oMeta'] is deprecated, use '" . self::GROUP_META . "'.");
+                    error_log('waveQl (table ' . $tableName . '): keyManifest[' . $oMeta . '] is deprecated, use ' . self::GROUP_META . '.');
                     $userKM[self::GROUP_META] = $userKM[$oMeta];
                     unset($userKM[$oMeta]);
                 }
@@ -584,7 +601,7 @@ abstract class waveQlCore
                 if (array_key_exists('mysql', $userKM[self::GROUP_META]) && !array_key_exists('sqlCondition', $userKM[self::GROUP_META])) {
                     $userKM[self::GROUP_META]['sqlCondition'] = $userKM[self::GROUP_META]['mysql'];
                     unset($userKM[self::GROUP_META]['mysql']);
-                    error_log("waveQl (table $tableName): In keyManifest['" . self::GROUP_META . "'] 'mysql' was renamed to 'sqlCondition'.");
+                    error_log('waveQl (table ' . $tableName . '): In keyManifest[' . self::GROUP_META . '] mysql was renamed to sqlCondition.');
                 }
             }
         }
@@ -784,7 +801,7 @@ abstract class waveQlCore
             }
             foreach ($patterns as $pattern) {
                 if (preg_match($pattern, $sql)) {
-                    throw new waveQlSecurityException("Unsafe SQL condition detected (group: $groupKey): " . $sql);
+                    throw new waveQlSecurityException('Unsafe SQL condition detected (group: ' . $groupKey . '): ' . $sql);
                 }
             }
         }
@@ -828,18 +845,18 @@ abstract class waveQlCore
                     'initial' => $this->keyManifest,
                     'live'    => $this->keyManifestLive,
                     'liveOp'  => $this->keyManifestLiveOp,
-                    default   => throw new waveQlInvalidArgumentException("Invalid status '$status' for key manifest."),
+                    default   => throw new waveQlInvalidArgumentException('Invalid status ' . $status . ' for key manifest.'),
                 };
             case 'meta':
                 return match ($status) {
                     'initial' => $this->metaManifest,
                     'live', 'liveOp' => $this->metaManifestLive,
-                    default   => throw new waveQlInvalidArgumentException("Invalid status '$status' for meta manifest."),
+                    default   => throw new waveQlInvalidArgumentException('Invalid status ' . $status . ' for meta manifest.'),
                 };
             default:
-                throw new waveQlInvalidArgumentException("Invalid manifest type '$type'. Allowed: 'table', 'key', 'meta'.");
+                throw new waveQlInvalidArgumentException('Invalid manifest type ' . $type . '. Allowed: table, key, meta.');
         }
-        throw new waveQlInvalidArgumentException("For type '$type' status '$status' is not available.");
+        throw new waveQlInvalidArgumentException('For type ' . $type . ' status ' . $status . ' is not available.');
     }
 
     ########################### OPERATOR REFRESH (EPIC 4)
