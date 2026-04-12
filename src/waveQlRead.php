@@ -30,8 +30,6 @@ namespace e2;
  */
 class waveQlRead extends waveQlCore
 {
-
-
     protected const ALLOWED_META_KEYS = [
                                         'sort',
                                         'pageNumber',
@@ -62,7 +60,6 @@ class waveQlRead extends waveQlCore
         return $this;
     }
 
-
     ##### Sets the search values (with optional operators).
     public function setValues(array $values): self
     {
@@ -74,15 +71,14 @@ class waveQlRead extends waveQlCore
     ##### Executes the query and returns the result as an array.
     public function execute(): array|int
     {
-
         if ($this->optionPrepared) {
             $prep = $this->getPreparedQuery();
             if (!$prep) {
-                throw new waveQlQueryException('No valid query.');
+                $this->handleError('query', 'No valid query.');
             }
             $stmt = $this->db->prepare($prep['query']);
             if (!$stmt) {
-                throw new waveQlQueryException('Prepare failed: ' . $this->db->error());
+                $this->handleError('query', 'Prepare failed: ' . $this->db->error());
             }
             if (!empty($prep['params'])) {
                 $this->db->execute($stmt, $prep['params'], $prep['types']);
@@ -98,11 +94,11 @@ class waveQlRead extends waveQlCore
         } else {
             $query = $this->getQuery();
             if (!$query) {
-                throw new waveQlQueryException('No valid query.');
+                $this->handleError('query', 'No valid query.');
             }
             $result = $this->db->query($query);
             if (!$result) {
-                throw new waveQlQueryException('Query failed: ' . $this->db->error());
+                $this->handleError('query', 'Query failed: ' . $this->db->error());
             }
             return $this->db->fetchAll($result);
         }
@@ -113,15 +109,15 @@ class waveQlRead extends waveQlCore
     {
         $query = $this->getCountQuery($total);
         if (!$query) {
-            throw new waveQlQueryException('No valid query.');
+            $this->handleError('query', 'No valid query.');
         }
         $result = $this->db->query($query);
         if (!$result) {
-            throw new waveQlQueryException('Query failed: ' . $this->db->error());
+            $this->handleError('query', 'Query failed: ' . $this->db->error());
         }
         $rows = $this->db->fetchAll($result);
         if (empty($rows)) {
-            throw new waveQlQueryException('Count query returned no rows.');
+            $this->handleError('query', 'Count query returned no rows.');
         }
         return (int)($rows[0]['count'] ?? 0);
     }
@@ -396,10 +392,8 @@ class waveQlRead extends waveQlCore
 
         //-- LIKE operator: at least one tilde
         if (substr_count($value, '~') >= 1) {
-
             $parts  = explode('~', $value);
             $string = implode('~', $parts);
-
             if (strpos($string, '~~') === false) {
                 $result[self::OP_LIKE] = $string;
             }
@@ -534,10 +528,8 @@ class waveQlRead extends waveQlCore
         }
 
         if (isset($def[self::OP_LIKE])) {
-
             $parts        = explode('~', $def[self::OP_LIKE]);
             $escapedParts = [];
-
             foreach ($parts as $part) {
                 $escapedParts[] = $this->getEscapedLikeString($part);
             }
@@ -584,7 +576,6 @@ class waveQlRead extends waveQlCore
 
         //-- Full‑text search over multiple fields
         if (!empty($meta['searchString']) && is_string($meta['searchString']) && trim($meta['searchString'], '~') !== '') {
-
             $targets     = is_string($meta['searchTarget']) ? explode(',', $meta['searchTarget']) : [];
             $searchParts = [];
             $main        = $this->keyManifestLive;
@@ -623,7 +614,6 @@ class waveQlRead extends waveQlCore
         $meta = $this->metaManifestLive;
 
         if (!empty($meta['searchString']) && is_string($meta['searchString']) && trim($meta['searchString'], '~') !== '') {
-
             $targets     = is_string($meta['searchTarget']) ? explode(',', $meta['searchTarget']) : [];
             $searchParts = [];
             $main        = $this->keyManifestLive;
@@ -728,7 +718,7 @@ class waveQlRead extends waveQlCore
         ];
     }
 
-    ########################### OPERATOR REFRESH (EPIC 4)
+    ########################### OPERATOR REFRESH
 
     protected function refreshOperators(): void
     {

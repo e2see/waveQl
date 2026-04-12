@@ -27,6 +27,7 @@ class dbAdapterMysqli implements waveQlDbInterface
 
     ########################### CONSTRUCTOR
 
+    ##### Constructor: stores the mysqli connection.
     public function __construct(\mysqli $db)
     {
         $this->db = $db;
@@ -128,7 +129,7 @@ class dbAdapterMysqli implements waveQlDbInterface
             return $name;
         }
 
-        //-- Dot notation quote each part
+        //-- Dot notation: quote each part
         if ($splitDot || strpos($name, '.') !== false) {
             $parts = explode('.', $name);
             $quoted = [];
