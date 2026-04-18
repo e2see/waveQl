@@ -52,6 +52,6 @@ if (!$connectionOk || !$tableExists) {
     include __DIR__ . '/sub/template.setup.php';
 } else {
     // Playground  mode
-    include __DIR__ . '/sub/head.demo.php';
-    include __DIR__ . '/sub/template.demo.php';
+    include __DIR__ . '/sub/head.playground.php';
+    include __DIR__ . '/sub/template.playground.php';
 }

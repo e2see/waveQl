@@ -36,17 +36,17 @@
         echo '<div class="config-details">
                 <p>✅ Connection to database <strong>' . htmlspecialchars($maskedDb) . '</strong> successful.</p>
                 <p>⚠️ However, the table <code>countries</code> is missing.</p>
-                <p>You can initialise the database automatically – the SQL script from <code>demo/setup.sql</code> will be executed.</p>';
+                <p>You can initialise the database automatically – the SQL script from <code>playground/setup.sql</code> will be executed.</p>';
 
         if ($allowInitSQL) {
             echo '<form method="get" action="">
                     <input type="hidden" name="initSQL" value="1">
                     <button type="submit" style="background: #2ecc71; color: white; border: none; padding: 0.6rem 1.2rem; font-weight: bold;">🚀 Run setup.sql now</button>
                 </form>
-                <p style="margin-top: 1rem;"><small>Alternatively, you can execute the file <code>demo/setup.sql</code> manually in your database tool.</small></p>';
+                <p style="margin-top: 1rem;"><small>Alternatively, you can execute the file <code>playground/setup.sql</code> manually in your database tool.</small></p>';
         } else {
             echo '<p>❌ Automatic initialisation is disabled in the configuration (<code>$allowInitSQL = false;</code>).</p>
-                <p>Please run <code>demo/setup.sql</code> manually in your database tool (e.g. phpMyAdmin, Adminer, or MySQL command line).</p>';
+                <p>Please run <code>playground/setup.sql</code> manually in your database tool (e.g. phpMyAdmin, Adminer, or MySQL command line).</p>';
         }
 
         echo '</div>';
